@@ -2,8 +2,12 @@ package com.zcunsoft.clklog.api.services;
 
 import com.zcunsoft.clklog.api.cfg.ClklogApiSetting;
 import com.zcunsoft.clklog.api.entity.clickhouse.*;
+import com.zcunsoft.clklog.api.entity.clickhouse.accesslog.Accesslogbydate;
 import com.zcunsoft.clklog.api.handlers.ConstsDataHolder;
 import com.zcunsoft.clklog.api.models.TimeFrame;
+import com.zcunsoft.clklog.api.models.accesslog.AccesslogFlowDetail;
+import com.zcunsoft.clklog.api.models.accesslog.GetAccesslogHostResponse;
+import com.zcunsoft.clklog.api.models.accesslog.GetAccesslogOverviewResponse;
 import com.zcunsoft.clklog.api.models.accesslog.GetAccesslogPageRequest;
 import com.zcunsoft.clklog.api.models.accesslog.GetAccesslogPageResponse;
 import com.zcunsoft.clklog.api.models.accesslog.GetAccesslogPageResponseData;
@@ -24,11 +28,13 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +63,18 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
             return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         }
     };
+    
+    private static final List<String> hostList;
+    static {
+    	hostList = new ArrayList<String>() {
+ 			{
+ 				add("huoqingqing.com");
+ 				add("h5.huoqingqing.com");
+ 				add("app.huoqingqing.com");
+ 				add("group.huoqingqing.com");
+ 			}
+ 		};
+    }
 
     private final ClklogApiSetting clklogApiSetting;
 
@@ -68,16 +86,242 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
         this.constsDataHolder = constsDataHolder;
     }
 
-    private static final ThreadLocal<DecimalFormat> decimalFormat =
-            new ThreadLocal<DecimalFormat>() {
-                @Override
-                protected DecimalFormat initialValue() {
-                    return new DecimalFormat("0.####");
-                }
-            };
+	private static final ThreadLocal<DecimalFormat> decimalFormat = new ThreadLocal<DecimalFormat>() {
+		@Override
+		protected DecimalFormat initialValue() {
+			return new DecimalFormat("0.####");
+		}
+	};
+
+	
+	
+	@Override
+	public GetAccesslogHostResponse getHost() {
+		GetAccesslogHostResponse response = new GetAccesslogHostResponse();
+		response.setData(hostList);
+		return response;
+	}
+	
+	
+
+	@Override
+	public GetAccesslogResponse getHostOverview(GetAccesslogRequest getAccesslogRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+		String getListSql = "select host as host,count(1) as pv,sum(request_length) as request_length,sum(body_bytes_sent) as body_bytes_sent,countDistinct(x_forward_for) as ip_count,sum(request_time) as visit_time from nginx_access t ";
+		String where = "";
+        where = buildHostFilter(getAccesslogRequest.getHost(), paramMap, where);
+        where = buildStatDateStartFilter(getAccesslogRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(getAccesslogRequest.getEndTime(), paramMap, where);
+		if (StringUtils.isNotBlank(where)) {
+			getListSql += " where " + where.substring(4);
+		}
+		getListSql += " group by t.host order by pv desc ";
+
+		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
+				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
+		Accesslogbydate totalAccesslogbydate = getTotalAccesslogbydate(getAccesslogRequest);
+		List<AccesslogFlowDetail> accesslogDetailList = new ArrayList<>();
+
+		GetAccesslogResponse response = new GetAccesslogResponse();
+		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
+			AccesslogFlowDetail accesslogFlowDetail = assemblyFlowDetail(accesslogbydate, totalAccesslogbydate);
+			accesslogFlowDetail.setHost(accesslogbydate.getHost());
+			accesslogDetailList.add(accesslogFlowDetail);
+		}
+		response.setData(accesslogDetailList);
+		return response;
+	}
+	
+	
+
+	@Override
+	public GetAccesslogOverviewResponse getOverview(GetAccesslogRequest getAccesslogRequest) {
+		Accesslogbydate accesslogbydate = getTotalAccesslogbydate(getAccesslogRequest);
+		GetAccesslogOverviewResponse response = new GetAccesslogOverviewResponse();
+		AccesslogFlowDetail accesslogFlowDetail = assemblyFlowDetail(accesslogbydate, null);
+		response.setData(accesslogFlowDetail);
+		return response;
+	}
 
 
-   
+	private Accesslogbydate getTotalAccesslogbydate(GetAccesslogRequest getAccesslogRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+		String getListSql = "select count(1) as pv,sum(request_length) as request_length,sum(body_bytes_sent) as body_bytes_sent,countDistinct(x_forward_for) as ip_count,sum(request_time) as visit_time from nginx_access t ";
+		String where = "";
+		where = buildDefaultHostFilter(paramMap, where);
+        where = buildStatDateStartFilter(getAccesslogRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(getAccesslogRequest.getEndTime(), paramMap, where);
+		if (StringUtils.isNotBlank(where)) {
+			getListSql += " where " + where.substring(4);
+		}
+		Accesslogbydate accesslogbydate = clickHouseJdbcTemplate.queryForObject(getListSql, paramMap,
+				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
+		return accesslogbydate;
+	}
+	
+	
+	
+
+	@Override
+	public GetAccesslogPageResponse getPerformance(GetAccesslogPageRequest getAccesslogPageRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+		String getListSql = "SELECT t2.uri as uri, t2.pv as pv, t2.slow_pv as slow_pv, t2.max_visit_time as max_visit_time, t2.avg_visit_time as avg_visit_time FROM ( ";
+		String getSonSql1 = "SELECT url2 as uri, sum(if(request_time >= 1, 1, 0)) AS slow_pv ";
+		String getSonSql2 = ",count(1) AS pv,avg(request_time) AS avg_visit_time , max(request_time) AS max_visit_time ";
+		String getSonSql3 = "FROM nginx_access t ";
+		String getCountSql = "SELECT count(1) FROM ( ";
+		String where = "";
+        where = buildHostFilter(getAccesslogPageRequest.getHost(), paramMap, where);
+        where = buildStatDateStartFilter(getAccesslogPageRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(getAccesslogPageRequest.getEndTime(), paramMap, where);
+		if (StringUtils.isNotBlank(where)) {
+			getSonSql3 += " where " + where.substring(4);
+		}
+		getSonSql3 += " GROUP BY url2 ORDER BY slow_pv DESC";
+		getListSql += getSonSql1 + getSonSql2 + getSonSql3 + ") t2 WHERE t2.slow_pv>0 ";
+		getCountSql += getSonSql1 + getSonSql3 + ") t2 WHERE t2.slow_pv>0 ";
+		getListSql += " limit " + (getAccesslogPageRequest.getPageNum() - 1) * getAccesslogPageRequest.getPageSize() + "," + getAccesslogPageRequest.getPageSize();
+		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
+				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
+		Integer total = clickHouseJdbcTemplate.queryForObject(getCountSql, paramMap, Integer.class);
+		List<AccesslogFlowDetail> accesslogDetailList = new ArrayList<>();
+
+		GetAccesslogPageResponse response = new GetAccesslogPageResponse();
+		GetAccesslogPageResponseData responseData = new GetAccesslogPageResponseData();
+		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
+			AccesslogFlowDetail accesslogFlowDetail = assemblyFlowDetail(accesslogbydate, null);
+			accesslogFlowDetail.setUri(accesslogbydate.getUri());
+			accesslogFlowDetail.setAvgVisitTime(accesslogbydate.getAvgVisitTime().setScale(4,BigDecimal.ROUND_HALF_UP));
+			if (accesslogbydate.getPv() != null && accesslogbydate.getPv().compareTo(BigDecimal.ZERO)>0) {
+                BigDecimal pvRate = accesslogbydate.getSlowPv().divide(accesslogbydate.getPv(),4,BigDecimal.ROUND_HALF_UP);
+                accesslogFlowDetail.setPvRate(pvRate);
+            }
+			accesslogDetailList.add(accesslogFlowDetail);
+		}
+		responseData.setRows(accesslogDetailList);
+		responseData.setTotal(total);
+		response.setData(responseData);
+		return response;
+	}
+
+
+
+	private AccesslogFlowDetail assemblyFlowDetail(Accesslogbydate baseDetailbydate, Accesslogbydate totalBaseDetailbydate) {
+		AccesslogFlowDetail accesslogFlowDetail = new AccesslogFlowDetail();
+		accesslogFlowDetail.setVisitTime(baseDetailbydate.getVisitTime());
+		accesslogFlowDetail.setPv(baseDetailbydate.getPv());
+		accesslogFlowDetail.setIpCount(baseDetailbydate.getIpCount());
+		accesslogFlowDetail.setRequestLength(baseDetailbydate.getRequestLength());
+		accesslogFlowDetail.setBodyBytesSent(baseDetailbydate.getBodyBytesSent());
+		accesslogFlowDetail.setSlowPv(baseDetailbydate.getSlowPv());
+		accesslogFlowDetail.setMaxVisitTime(baseDetailbydate.getMaxVisitTime());
+        if (baseDetailbydate.getIpCount() != null && baseDetailbydate.getIpCount().compareTo(BigDecimal.ZERO)>0) {
+            BigDecimal avgVisitTime = baseDetailbydate.getVisitTime().divide(baseDetailbydate.getIpCount(),4,BigDecimal.ROUND_HALF_UP);
+            accesslogFlowDetail.setAvgVisitTime(avgVisitTime);
+        }
+        if (totalBaseDetailbydate != null) {
+            if (totalBaseDetailbydate.getPv() != null && totalBaseDetailbydate.getPv().compareTo(BigDecimal.ZERO)>0) {
+                BigDecimal pvRate = baseDetailbydate.getPv().divide(totalBaseDetailbydate.getPv(),4,BigDecimal.ROUND_HALF_UP);
+                accesslogFlowDetail.setPvRate(pvRate);
+            }
+            if (totalBaseDetailbydate.getRequestLength() != null && totalBaseDetailbydate.getRequestLength().compareTo(BigDecimal.ZERO)>0) {
+                BigDecimal requestLengthRate = baseDetailbydate.getRequestLength().divide(totalBaseDetailbydate.getRequestLength(),4,BigDecimal.ROUND_HALF_UP);
+                accesslogFlowDetail.setRequestLengthRate(requestLengthRate);
+            }
+            if (totalBaseDetailbydate.getBodyBytesSent() != null && totalBaseDetailbydate.getBodyBytesSent().compareTo(BigDecimal.ZERO)>0) {
+                BigDecimal bodyBytesSentRate = baseDetailbydate.getBodyBytesSent().divide(totalBaseDetailbydate.getBodyBytesSent(),4,BigDecimal.ROUND_HALF_UP);
+                accesslogFlowDetail.setBodyBytesSentRate(bodyBytesSentRate);
+            }
+            if (totalBaseDetailbydate.getIpCount() != null && totalBaseDetailbydate.getIpCount().compareTo(BigDecimal.ZERO)>0) {
+                BigDecimal ipCountRate = baseDetailbydate.getIpCount().divide(totalBaseDetailbydate.getIpCount(),4,BigDecimal.ROUND_HALF_UP);
+                accesslogFlowDetail.setIpCountRate(ipCountRate);
+            }
+//            if (totalBaseDetailbydate.getVisitCount() > 0) {
+//                float visitCountRate = baseDetailbydate.getVisitCount() * 1.0f / totalBaseDetailbydate.getVisitCount();
+//                flowDetail.setVisitCountRate(Float.parseFloat(decimalFormat.get().format(visitCountRate)));
+//            }
+//            if (totalBaseDetailbydate.getUv() > 0) {
+//                float uvRate = baseDetailbydate.getUv() * 1.0f / totalBaseDetailbydate.getUv();
+//                flowDetail.setUvRate(Float.parseFloat(decimalFormat.get().format(uvRate)));
+//            }
+//            if (totalBaseDetailbydate.getNewUv() > 0) {
+//                float newUrRate = baseDetailbydate.getNewUv() * 1.0f / totalBaseDetailbydate.getUv();
+//                flowDetail.setNewUvRate(Float.parseFloat(decimalFormat.get().format(newUrRate)));
+//            }
+//            if (totalBaseDetailbydate.getIpCount() > 0) {
+//                float ipCountRate = baseDetailbydate.getIpCount() * 1.0f / totalBaseDetailbydate.getIpCount();
+//                flowDetail.setIpCountRate(Float.parseFloat(decimalFormat.get().format(ipCountRate)));
+//            }
+//            if (totalBaseDetailbydate.getVisitTime() > 0) {
+//                float visitTimeRate = baseDetailbydate.getVisitTime() * 1.0f / totalBaseDetailbydate.getVisitTime();
+//                flowDetail.setVisitTimeRate(Float.parseFloat(decimalFormat.get().format(visitTimeRate)));
+//            }
+        }
+        return accesslogFlowDetail;
+    }
+
+	@Override
+	public GetAccesslogPageResponse getAccesslogPageTest(GetAccesslogPageRequest getAccesslogPageRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+		String selectSql = "select t._time_datepart as time_datepart,count(1) visit_count from nginx_access t ";
+		String getListSql = "" + selectSql;
+//                String getSummarySql = "select " + selectSql;
+		String getCountSql = "select count(1) from (select t._time_datepart as time_datepart from nginx_access t group by t._time_datepart) ";
+		String where = "";
+		if (StringUtils.isNotBlank(where)) {
+
+		}
+		getListSql += " group by t._time_datepart order by t._time_datepart asc ";
+		getListSql += " limit " + (getAccesslogPageRequest.getPageNum() - 1) * getAccesslogPageRequest.getPageSize()
+				+ "," + getAccesslogPageRequest.getPageSize();
+
+		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
+				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
+
+		Integer total = clickHouseJdbcTemplate.queryForObject(getCountSql, paramMap, Integer.class);
+
+		List<Map<String, Object>> accesslogDetailList = new ArrayList<>();
+
+		GetAccesslogPageResponse response = new GetAccesslogPageResponse();
+		GetAccesslogPageResponseData responseData = new GetAccesslogPageResponseData();
+		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
+			Map<String, Object> map = new HashMap<String, Object>();
+			map.put("time", yMdFORMAT.get().format(accesslogbydate.getTimeDatepart()));
+//			map.put("visitCount", accesslogbydate.getVisitCount());
+			accesslogDetailList.add(map);
+		}
+		responseData.setRows(null);
+		responseData.setTotal(total);
+		response.setData(responseData);
+		return response;
+	}
+
+	@Override
+	public GetAccesslogResponse getAccesslogTest(GetAccesslogRequest getAccesslogRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+		String selectSql = "select t._time_datepart as time_datepart,count(1) visit_count from nginx_access t ";
+		String getListSql = "" + selectSql;
+		String where = "";
+		if (StringUtils.isNotBlank(where)) {
+
+		}
+		getListSql += " group by t._time_datepart order by t._time_datepart asc ";
+
+		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
+				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
+
+		List<Map<String, Object>> accesslogDetailList = new ArrayList<>();
+
+		GetAccesslogResponse response = new GetAccesslogResponse();
+		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
+			Map<String, Object> map = new HashMap<String, Object>();
+			map.put("time", yMdFORMAT.get().format(accesslogbydate.getTimeDatepart()));
+//			map.put("visitCount", accesslogbydate.getVisitCount());
+			accesslogDetailList.add(map);
+		}
+		response.setData(null);
+		return response;
+	}
 
     private FlowSummary getFlowByTimeframe(GetFlowRequest getFlowRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
@@ -483,10 +727,28 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
     private String buildStatDateEndFilter(String _endTime, MapSqlParameterSource paramMap, String where) {
         return buildStatDateEndFilter(_endTime, paramMap, where, "day");
     }
+    
+    private String buildHostFilter(String host, MapSqlParameterSource paramMap, String where) {
+        where += " and t.host in (:host)";
+        if(StringUtils.isNotEmpty(host)) {
+        	paramMap.addValue("host", Arrays.asList(host));
+    	} else {
+    		paramMap.addValue("host", hostList);
+    	}
+        
+        return where;
+    }
+    
+    private String buildDefaultHostFilter(MapSqlParameterSource paramMap, String where) {
+        where += " and t.host in (:host)";
+    	paramMap.addValue("host", hostList);
+        
+        return where;
+    }
 
     private String buildStatDateEndFilter(String _endTime, MapSqlParameterSource paramMap, String where, String timeType) {
         Timestamp endTime = transformFilterTime(_endTime, false, timeType);
-        where += " and t.stat_date<=:endtime";
+        where += " and t._time_datepart <=:endtime";
         paramMap.addValue("endtime", this.yMdFORMAT.get().format(endTime));
         return where;
     }
@@ -497,7 +759,7 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 
     private String buildStatDateStartFilter(String _startTime, MapSqlParameterSource paramMap, String where, String timeType) {
         Timestamp startTime = transformFilterTime(_startTime, true, timeType);
-        where += " and t.stat_date>=:starttime";
+        where += " and t._time_datepart >=:starttime";
         paramMap.addValue("starttime", this.yMdFORMAT.get().format(startTime));
         return where;
     }
@@ -716,79 +978,6 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
         return timeFrame;
     }
     
-    private String isFirstDayToConvert(String isFirstDay) {
-    	if("true".equalsIgnoreCase(isFirstDay)){
-    		return "新访客";
-    	} else if("false".equalsIgnoreCase(isFirstDay)){
-    		return "老访客";
-    	} else if("all".equalsIgnoreCase(isFirstDay)){
-    		return "全部";
-    	} else {
-    		return isFirstDay;
-    	}
-    }
-
-    @Override
-    public GetAccesslogPageResponse getAccesslogPageTest(GetAccesslogPageRequest getAccesslogPageRequest) {
-        MapSqlParameterSource paramMap = new MapSqlParameterSource();
-        String selectSql = "select t._time_datepart as time_datepart,count(1) visit_count from nginx_access t ";
-        String getListSql = "" + selectSql;
-//        String getSummarySql = "select " + selectSql;
-        String getCountSql = "select count(1) from (select t._time_datepart as time_datepart from nginx_access t group by t._time_datepart) ";
-        String where = "";
-        if (StringUtils.isNotBlank(where)) {
-        	
-        }
-        getListSql += " group by t._time_datepart order by t._time_datepart asc ";
-        getListSql += " limit " + (getAccesslogPageRequest.getPageNum() - 1) * getAccesslogPageRequest.getPageSize() + "," + getAccesslogPageRequest.getPageSize();
-
-
-        List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
-
-        Integer total = clickHouseJdbcTemplate.queryForObject(getCountSql, paramMap, Integer.class);
-
-        List<Map<String,Object>> accesslogDetailList = new ArrayList<>();
-
-        GetAccesslogPageResponse response = new GetAccesslogPageResponse();
-        GetAccesslogPageResponseData responseData = new GetAccesslogPageResponseData();
-        for (Accesslogbydate accesslogbydate : accesslogbydateList) {
-        	Map<String,Object> map =new HashMap<String, Object>();
-        	map.put("time", yMdFORMAT.get().format(accesslogbydate.getTimeDatepart()));
-        	map.put("visitCount", accesslogbydate.getVisitCount());
-        	accesslogDetailList.add(map);
-        }
-        responseData.setRows(accesslogDetailList);
-        responseData.setTotal(total);
-        response.setData(responseData);
-        return response;
-    }
-
-	@Override
-	public GetAccesslogResponse getAccesslogTest(GetAccesslogRequest getAccesslogRequest) {
-		MapSqlParameterSource paramMap = new MapSqlParameterSource();
-        String selectSql = "select t._time_datepart as time_datepart,count(1) visit_count from nginx_access t ";
-        String getListSql = "" + selectSql;
-        String where = "";
-        if (StringUtils.isNotBlank(where)) {
-        	
-        }
-        getListSql += " group by t._time_datepart order by t._time_datepart asc ";
-
-
-        List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
-
-        List<Map<String,Object>> accesslogDetailList = new ArrayList<>();
-
-        GetAccesslogResponse response = new GetAccesslogResponse();
-        for (Accesslogbydate accesslogbydate : accesslogbydateList) {
-        	Map<String,Object> map =new HashMap<String, Object>();
-        	map.put("time", yMdFORMAT.get().format(accesslogbydate.getTimeDatepart()));
-        	map.put("visitCount", accesslogbydate.getVisitCount());
-        	accesslogDetailList.add(map);
-        }
-        response.setData(accesslogDetailList);
-        return response;
-	}
-    
+  
     
 }

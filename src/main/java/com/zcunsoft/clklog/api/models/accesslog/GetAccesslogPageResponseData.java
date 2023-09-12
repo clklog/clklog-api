@@ -13,5 +13,5 @@ public class GetAccesslogPageResponseData {
 
 	private int total;
 	
-    private List<Map<String,Object>> rows;
+    private List<AccesslogFlowDetail> rows;
 }
