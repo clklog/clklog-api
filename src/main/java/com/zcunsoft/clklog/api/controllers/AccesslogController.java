@@ -57,8 +57,32 @@ public class AccesslogController {
     }
     
     @Operation(summary = "性能分析")
-    @RequestMapping(path = "/getPerformance", method = RequestMethod.POST)
-    public GetAccesslogPageResponse getPerformance(@RequestBody GetAccesslogPageRequest getAccesslogPageRequest,HttpServletRequest request) {
-        return accesslogIReportService.getPerformance(getAccesslogPageRequest);
+    @RequestMapping(path = "/getPerformanceDetail", method = RequestMethod.POST)
+    public GetAccesslogPageResponse getPerformanceDetail(@RequestBody GetAccesslogPageRequest getAccesslogPageRequest,HttpServletRequest request) {
+        return accesslogIReportService.getPerformanceDetail(getAccesslogPageRequest);
+    }
+    
+    @Operation(summary = "状态码分析")
+    @RequestMapping(path = "/getStatus", method = RequestMethod.POST)
+    public GetAccesslogResponse getStatus(@RequestBody GetAccesslogRequest getAccesslogRequest,HttpServletRequest request) {
+        return accesslogIReportService.getStatus(getAccesslogRequest);
+    }
+    
+    @Operation(summary = "状态码详情")
+    @RequestMapping(path = "/getStatusDetail", method = RequestMethod.POST)
+    public GetAccesslogPageResponse getStatusDetail(@RequestBody GetAccesslogPageRequest getAccesslogPageRequest,HttpServletRequest request) {
+        return accesslogIReportService.getStatusDetail(getAccesslogPageRequest);
+    }
+    
+    @Operation(summary = "IP分析")
+    @RequestMapping(path = "/getIpDetail", method = RequestMethod.POST)
+    public GetAccesslogPageResponse getIpDetail(@RequestBody GetAccesslogPageRequest getAccesslogPageRequest,HttpServletRequest request) {
+        return accesslogIReportService.getIpDetail(getAccesslogPageRequest);
+    }
+    
+    @Operation(summary = "根据IP获取URI信息")
+    @RequestMapping(path = "/getUriDetailByIp", method = RequestMethod.POST)
+    public GetAccesslogPageResponse getUriDetailByIp(@RequestBody GetAccesslogPageRequest getAccesslogPageRequest,HttpServletRequest request) {
+        return accesslogIReportService.getUriDetailByIp(getAccesslogPageRequest);
     }
 }

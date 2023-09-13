@@ -18,6 +18,12 @@ public class GetAccesslogPageRequest  {
     @Schema(description = "Host", requiredMode = Schema.RequiredMode.REQUIRED, example = "huoqingqing.com")
     private String host;
     
+    @Schema(description = "状态码", requiredMode = Schema.RequiredMode.REQUIRED, example = "200")
+    private String status;
+    
+    @Schema(description = "IP", requiredMode = Schema.RequiredMode.REQUIRED, example = "127.0.0.1")
+    private String ip;
+    
     @Schema(description = "开始时间", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023-06-08")
     private String startTime;
     @Schema(description = "结束时间", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023-06-10")

@@ -1,6 +1,10 @@
 package com.zcunsoft.clklog.api.models.accesslog;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -49,5 +53,24 @@ public class AccesslogFlowDetail {
     
     @Schema(description = "访问IP数占比")
     private BigDecimal ipCountRate;
+    
+    @Schema(description = "状态码")
+	private String status;
+	
+    @Schema(description = "uri数")
+	private BigDecimal uriCount;
+    
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "上次访问时间")
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
+    private Timestamp latestTime;
+    
+    @Schema(description = "IP")
+	private String ip;
+    
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "访问时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Timestamp logTime;
     
 }

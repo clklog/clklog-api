@@ -20,5 +20,13 @@ public interface AccesslogIReportService {
 	
 	GetAccesslogOverviewResponse getOverview(GetAccesslogRequest getAccesslogRequest);
 	
-	GetAccesslogPageResponse getPerformance(GetAccesslogPageRequest getAccesslogPageRequest);
+	GetAccesslogPageResponse getPerformanceDetail(GetAccesslogPageRequest getAccesslogPageRequest);
+	
+	GetAccesslogResponse getStatus(GetAccesslogRequest getAccesslogRequest);
+	
+	GetAccesslogPageResponse getStatusDetail(GetAccesslogPageRequest getAccesslogPageRequest);
+	
+	GetAccesslogPageResponse getIpDetail(GetAccesslogPageRequest getAccesslogPageRequest);
+	
+	GetAccesslogPageResponse getUriDetailByIp(GetAccesslogPageRequest getAccesslogPageRequest);
 }

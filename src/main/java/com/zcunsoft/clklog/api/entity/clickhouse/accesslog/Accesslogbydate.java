@@ -47,4 +47,18 @@ public class Accesslogbydate  {
 	@Column
 	BigDecimal avgVisitTime;
 	
+	@Column
+	String status;
+	
+	@Column
+	BigDecimal uriCount;
+	
+	@Column
+    Timestamp latestTime;
+	
+	@Column
+	String ip;
+	
+	@Column
+    Timestamp logTime;
 }
