@@ -363,7 +363,7 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 
 	private AccesslogFlowDetail assemblyFlowDetail(Accesslogbydate baseDetailbydate, Accesslogbydate totalBaseDetailbydate) {
 		AccesslogFlowDetail accesslogFlowDetail = new AccesslogFlowDetail();
-		accesslogFlowDetail.setVisitTime(baseDetailbydate.getVisitTime().setScale(4,BigDecimal.ROUND_HALF_UP));
+		accesslogFlowDetail.setVisitTime(baseDetailbydate.getVisitTime() != null ? baseDetailbydate.getVisitTime().setScale(4,BigDecimal.ROUND_HALF_UP) : BigDecimal.ZERO);
 		accesslogFlowDetail.setPv(baseDetailbydate.getPv());
 		accesslogFlowDetail.setIpCount(baseDetailbydate.getIpCount());
 		accesslogFlowDetail.setRequestLength(baseDetailbydate.getRequestLength());
