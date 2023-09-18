@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Schema(description = "日志分析请求")
 @Data
-public class GetAccesslogRequest {
+public class GetAccesslogRequest extends AccesslogBaseSort {
 
     @Schema(description = "Host", requiredMode = Schema.RequiredMode.REQUIRED, example = "huoqingqing.com")
     private String host;
@@ -15,4 +15,7 @@ public class GetAccesslogRequest {
     private String startTime;
     @Schema(description = "结束时间", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023-06-10")
     private String endTime;
+    
+    @Schema(description = "时间类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "hour,day,week,month")
+    private String timeType;
 }

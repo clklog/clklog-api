@@ -30,6 +30,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
@@ -109,6 +110,7 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 	public GetAccesslogResponse getHostOverview(GetAccesslogRequest getAccesslogRequest) {
 		MapSqlParameterSource paramMap = new MapSqlParameterSource();
 		String getListSql = "select host as host,count(1) as pv,sum(request_length) as request_length,sum(body_bytes_sent) as body_bytes_sent,countDistinct(x_forward_for) as ip_count,sum(request_time) as visit_time from nginx_access t ";
+		String getSummarySql ="select sum(t1.pv) as pv,sum(t1.request_length) as request_length,sum(t1.body_bytes_sent) as body_bytes_sent,sum(t1.ip_count) as ip_count,sum(t1.visit_time) as visit_time  from (";
 		String where = "";
         where = buildHostFilter(getAccesslogRequest.getHost(), paramMap, where);
         where = buildStatDateStartFilter(getAccesslogRequest.getStartTime(), paramMap, where);
@@ -116,13 +118,27 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		if (StringUtils.isNotBlank(where)) {
 			getListSql += " where " + where.substring(4);
 		}
-		getListSql += " group by t.host order by pv desc ";
-
+//		getListSql += " group by t.host order by pv desc ";
+		getListSql += " group by host " + getSortSqlFormat(getAccesslogRequest.getSortName(), getAccesslogRequest.getSortOrder(), "pv");
+		getSummarySql += getListSql +") t1";
 		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
 				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
-		Accesslogbydate totalAccesslogbydate = getTotalAccesslogbydate(getAccesslogRequest);
+		
+		Accesslogbydate totalAccesslogbydate = clickHouseJdbcTemplate.queryForObject(getSummarySql, paramMap,
+				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
 		List<AccesslogFlowDetail> accesslogDetailList = new ArrayList<>();
-
+//		Timestamp startTime = transformFilterTime(getAccesslogRequest.getStartTime(), true, getAccesslogRequest.getTimeType());
+//        Timestamp endTime = transformFilterTime(getAccesslogRequest.getEndTime(), false, getAccesslogRequest.getTimeType());
+//        if ("hour".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
+//            flowDetailList = getFlowTrendByHour(paramMap, totalFlowDetail, where);
+//        } else if ("day".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
+//            flowDetailList = getFlowTrendByDate(flowTrendbydateList, totalFlowDetail, startTime, endTime);
+//        } else if ("week".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
+//            flowDetailList = getFlowTrendByWeek(flowTrendbydateList, totalFlowDetail, startTime, endTime);
+//        } else if ("month".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
+//            flowDetailList = getFlowTrendByMonth(flowTrendbydateList, totalFlowDetail, startTime, endTime);
+//        }
+		
 		GetAccesslogResponse response = new GetAccesslogResponse();
 		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
 			AccesslogFlowDetail accesslogFlowDetail = assemblyFlowDetail(accesslogbydate, totalAccesslogbydate);
@@ -166,10 +182,8 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 	@Override
 	public GetAccesslogPageResponse getPerformanceDetail(GetAccesslogPageRequest getAccesslogPageRequest) {
 		MapSqlParameterSource paramMap = new MapSqlParameterSource();
-		String getListSql = "SELECT t2.uri as uri, t2.pv as pv, t2.slow_pv as slow_pv, t2.max_visit_time as max_visit_time, t2.avg_visit_time as avg_visit_time FROM ( ";
-		String getSonSql1 = "SELECT url2 as uri, sum(if(request_time >= 1, 1, 0)) AS slow_pv ";
-		String getSonSql2 = ",count(1) AS pv,avg(request_time) AS avg_visit_time , max(request_time) AS max_visit_time ";
-		String getSonSql3 = "FROM nginx_access t ";
+		String getListSql = "SELECT t2.host as host,t2.uri as uri, t2.pv as pv, t2.slow_pv as slow_pv, t2.max_visit_time as max_visit_time, t2.avg_visit_time as avg_visit_time FROM ( ";
+		String getSonSql1 = "SELECT host as host,url2 as uri, sum(if(request_time >= 1, 1, 0)) AS slow_pv,count(1) AS pv,avg(request_time) AS avg_visit_time , max(request_time) AS max_visit_time FROM nginx_access t ";
 		String getCountSql = "SELECT count(1) FROM ( ";
 		String where = "";
         where = buildHostFilter(getAccesslogPageRequest.getHost(), paramMap, where);
@@ -177,11 +191,12 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
         where = buildStatDateEndFilter(getAccesslogPageRequest.getEndTime(), paramMap, where);
         where = buildStatusFilter(getAccesslogPageRequest.getStatus(), paramMap, where);
 		if (StringUtils.isNotBlank(where)) {
-			getSonSql3 += " where " + where.substring(4);
+			getSonSql1 += " where " + where.substring(4);
 		}
-		getSonSql3 += " GROUP BY url2 ORDER BY slow_pv DESC";
-		getListSql += getSonSql1 + getSonSql2 + getSonSql3 + ") t2 WHERE t2.slow_pv>0 ";
-		getCountSql += getSonSql1 + getSonSql3 + ") t2 WHERE t2.slow_pv>0 ";
+//		getSonSql3 += " GROUP BY host,url2 ORDER BY slow_pv DESC";
+		getSonSql1 += " GROUP BY host,url2 " + getSortSqlFormat(getAccesslogPageRequest.getSortName(), getAccesslogPageRequest.getSortOrder(), "slow_pv");
+		getListSql += getSonSql1  + ") t2 WHERE t2.slow_pv>0 ";
+		getCountSql += getSonSql1 + ") t2 WHERE t2.slow_pv>0 ";
 		getListSql += " limit " + (getAccesslogPageRequest.getPageNum() - 1) * getAccesslogPageRequest.getPageSize() + "," + getAccesslogPageRequest.getPageSize();
 		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
 				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
@@ -192,10 +207,11 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		GetAccesslogPageResponseData responseData = new GetAccesslogPageResponseData();
 		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
 			AccesslogFlowDetail accesslogFlowDetail = assemblyFlowDetail(accesslogbydate, null);
+			accesslogFlowDetail.setHost(accesslogbydate.getHost());
 			accesslogFlowDetail.setUri(accesslogbydate.getUri());
-			accesslogFlowDetail.setAvgVisitTime(accesslogbydate.getAvgVisitTime().setScale(4,BigDecimal.ROUND_HALF_UP));
+			accesslogFlowDetail.setAvgVisitTime(accesslogbydate.getAvgVisitTime().setScale(5,RoundingMode.DOWN));
 			if (accesslogbydate.getPv() != null && accesslogbydate.getPv().compareTo(BigDecimal.ZERO)>0) {
-                BigDecimal pvRate = accesslogbydate.getSlowPv().divide(accesslogbydate.getPv(),4,BigDecimal.ROUND_HALF_UP);
+                BigDecimal pvRate = accesslogbydate.getSlowPv().divide(accesslogbydate.getPv(),5,RoundingMode.DOWN);
                 accesslogFlowDetail.setPvRate(pvRate);
             }
 			accesslogDetailList.add(accesslogFlowDetail);
@@ -219,7 +235,7 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		if (StringUtils.isNotBlank(where)) {
 			getListSql += " where " + where.substring(4);
 		}
-		getListSql += " group by status order by pv desc ";
+		getListSql += " group by status " + getSortSqlFormat(getAccesslogRequest.getSortName(), getAccesslogRequest.getSortOrder(), "pv");;
 
 		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
 				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
@@ -240,10 +256,8 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 	@Override
 	public GetAccesslogPageResponse getStatusDetail(GetAccesslogPageRequest getAccesslogPageRequest) {
 		MapSqlParameterSource paramMap = new MapSqlParameterSource();
-		String getListSql = "SELECT t2.uri as uri, t2.pv as pv, t2.slow_pv as slow_pv, t2.max_visit_time as max_visit_time, t2.avg_visit_time as avg_visit_time FROM ( ";
-		String getSonSql1 = "SELECT url2 as uri ";
-		String getSonSql2 = ", sum(if(request_time >= 1, 1, 0)) AS slow_pv,count(1) AS pv,avg(request_time) AS avg_visit_time , max(request_time) AS max_visit_time ";
-		String getSonSql3 = "FROM nginx_access t ";
+		String getListSql = "SELECT t2.host as host,t2.uri as uri, t2.pv as pv, t2.slow_pv as slow_pv, t2.max_visit_time as max_visit_time, t2.avg_visit_time as avg_visit_time FROM ( ";
+		String getSonSql1 = "SELECT host as host,url2 as uri, sum(if(request_time >= 1, 1, 0)) AS slow_pv,count(1) AS pv,avg(request_time) AS avg_visit_time , max(request_time) AS max_visit_time FROM nginx_access t ";
 		String getCountSql = "SELECT count(1) FROM ( ";
 		String where = "";
         where = buildHostFilter(getAccesslogPageRequest.getHost(), paramMap, where);
@@ -251,11 +265,11 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
         where = buildStatDateEndFilter(getAccesslogPageRequest.getEndTime(), paramMap, where);
         where = buildStatusFilter(getAccesslogPageRequest.getStatus(), paramMap, where);
 		if (StringUtils.isNotBlank(where)) {
-			getSonSql3 += " where " + where.substring(4);
+			getSonSql1 += " where " + where.substring(4);
 		}
-		getSonSql3 += " GROUP BY url2 ORDER BY count(1) DESC";
-		getListSql += getSonSql1 + getSonSql2 + getSonSql3 + ") t2 ";
-		getCountSql += getSonSql1 + getSonSql3 + ") t2 ";
+		getSonSql1 += " GROUP BY host,url2 " + getSortSqlFormat(getAccesslogPageRequest.getSortName(), getAccesslogPageRequest.getSortOrder(), "pv");
+		getListSql += getSonSql1 +") t2 ";
+		getCountSql += getSonSql1 + ") t2 ";
 		getListSql += " limit " + (getAccesslogPageRequest.getPageNum() - 1) * getAccesslogPageRequest.getPageSize() + "," + getAccesslogPageRequest.getPageSize();
 		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
 				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
@@ -266,10 +280,11 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		GetAccesslogPageResponseData responseData = new GetAccesslogPageResponseData();
 		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
 			AccesslogFlowDetail accesslogFlowDetail = assemblyFlowDetail(accesslogbydate, null);
+			accesslogFlowDetail.setHost(accesslogbydate.getHost());
 			accesslogFlowDetail.setUri(accesslogbydate.getUri());
-			accesslogFlowDetail.setAvgVisitTime(accesslogbydate.getAvgVisitTime().setScale(4,BigDecimal.ROUND_HALF_UP));
+			accesslogFlowDetail.setAvgVisitTime(accesslogbydate.getAvgVisitTime().setScale(5,RoundingMode.DOWN));
 			if (accesslogbydate.getPv() != null && accesslogbydate.getPv().compareTo(BigDecimal.ZERO)>0) {
-                BigDecimal pvRate = accesslogbydate.getSlowPv().divide(accesslogbydate.getPv(),4,BigDecimal.ROUND_HALF_UP);
+                BigDecimal pvRate = accesslogbydate.getSlowPv().divide(accesslogbydate.getPv(),5,RoundingMode.DOWN);
                 accesslogFlowDetail.setPvRate(pvRate);
             }
 			accesslogDetailList.add(accesslogFlowDetail);
@@ -295,7 +310,7 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 			getCountSql += " where " + where.substring(4);
 		}
 		getCountSql += " GROUP BY t.x_forward_for) t";
-		getListSql += " GROUP BY x_forward_for ORDER BY pv DESC";
+		getListSql += " GROUP BY x_forward_for " + getSortSqlFormat(getAccesslogPageRequest.getSortName(), getAccesslogPageRequest.getSortOrder(), "latest_time");
 		getListSql += " limit " + (getAccesslogPageRequest.getPageNum() - 1) * getAccesslogPageRequest.getPageSize() + "," + getAccesslogPageRequest.getPageSize();
 		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
 				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
@@ -312,7 +327,7 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 			AccesslogFlowDetail accesslogFlowDetail = assemblyFlowDetail(accesslogbydate, totalAccesslogbydate);
 			accesslogFlowDetail.setIp(accesslogbydate.getIp());
 			accesslogFlowDetail.setLatestTime(accesslogbydate.getLatestTime());
-			accesslogFlowDetail.setAvgVisitTime(accesslogbydate.getAvgVisitTime().setScale(4,BigDecimal.ROUND_HALF_UP));
+			accesslogFlowDetail.setAvgVisitTime(accesslogbydate.getAvgVisitTime().setScale(5,RoundingMode.DOWN));
 			accesslogDetailList.add(accesslogFlowDetail);
 		}
 		responseData.setRows(accesslogDetailList);
@@ -336,7 +351,8 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 			getListSql += " where " + where.substring(4);
 			getCountSql += " where " + where.substring(4);
 		}
-		getListSql += " ORDER BY _time_ ASC";
+//		getListSql += " ORDER BY _time_ ASC";
+		getListSql += getSortSqlFormat(getAccesslogPageRequest.getSortName(), getAccesslogPageRequest.getSortOrder(), "_time_");
 		getListSql += " limit " + (getAccesslogPageRequest.getPageNum() - 1) * getAccesslogPageRequest.getPageSize() + "," + getAccesslogPageRequest.getPageSize();
 		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
 				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
@@ -360,10 +376,51 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		response.setData(responseData);
 		return response;
 	}
+	
+	private static String getSortSqlFormat(String sortName,String sortOrder,String defalutSortName) {
+    	
+    	if("p".equals(sortName)) {
+    		return " ORDER BY if(visit_count == 0 , 0 ,pv/visit_count) "+ sortOrder;
+    	}
+    	if("logTime".equals(sortName)) {
+    		return " ORDER BY _time_ "+ sortOrder;
+    	}
+    	if("visitTime".equals(sortName)) {
+    		return " ORDER BY visit_time "+ sortOrder;
+    	}
+    	if("pv".equals(sortName)) {
+    		return " ORDER BY pv "+ sortOrder;
+    	}
+    	if("requestLength".equals(sortName)) {
+    		return " ORDER BY request_length "+ sortOrder;
+    	}
+    	if("bodyBytesSent".equals(sortName)) {
+    		return " ORDER BY body_bytes_sent "+ sortOrder;
+    	}
+		if("ipCount".equals(sortName)) {
+			return " ORDER BY ip_count "+ sortOrder;
+		}
+		if("slowPv".equals(sortName)) {
+			return " ORDER BY slow_pv "+ sortOrder;
+		}
+		if("maxVisitTime".equals(sortName)) {
+			return " ORDER BY max_visit_time "+ sortOrder;
+		}
+		if("avgVisitTime".equals(sortName)) {
+			return " ORDER BY avg_visit_time "+ sortOrder;
+		}
+		if("uriCount".equals(sortName)) {
+			return " ORDER BY uri_count "+ sortOrder;
+		}
+		if("latestTime".equals(sortName)) {
+			return "ORDER BY latest_time " + sortOrder;
+		}
+    	return " ORDER BY " +defalutSortName + " desc "; 
+	}
 
 	private AccesslogFlowDetail assemblyFlowDetail(Accesslogbydate baseDetailbydate, Accesslogbydate totalBaseDetailbydate) {
 		AccesslogFlowDetail accesslogFlowDetail = new AccesslogFlowDetail();
-		accesslogFlowDetail.setVisitTime(baseDetailbydate.getVisitTime() != null ? baseDetailbydate.getVisitTime().setScale(4,BigDecimal.ROUND_HALF_UP) : BigDecimal.ZERO);
+		accesslogFlowDetail.setVisitTime(baseDetailbydate.getVisitTime() != null ? baseDetailbydate.getVisitTime().setScale(5,RoundingMode.DOWN) : BigDecimal.ZERO);
 		accesslogFlowDetail.setPv(baseDetailbydate.getPv());
 		accesslogFlowDetail.setIpCount(baseDetailbydate.getIpCount());
 		accesslogFlowDetail.setRequestLength(baseDetailbydate.getRequestLength());
@@ -372,24 +429,24 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		accesslogFlowDetail.setMaxVisitTime(baseDetailbydate.getMaxVisitTime());
 		accesslogFlowDetail.setUriCount(baseDetailbydate.getUriCount());
         if (baseDetailbydate.getIpCount() != null && baseDetailbydate.getIpCount().compareTo(BigDecimal.ZERO)>0) {
-            BigDecimal avgVisitTime = baseDetailbydate.getVisitTime().divide(baseDetailbydate.getIpCount(),4,BigDecimal.ROUND_HALF_UP);
+            BigDecimal avgVisitTime = baseDetailbydate.getVisitTime().divide(baseDetailbydate.getIpCount(),5,RoundingMode.DOWN);
             accesslogFlowDetail.setAvgVisitTime(avgVisitTime);
         }
         if (totalBaseDetailbydate != null) {
             if (totalBaseDetailbydate.getPv() != null && totalBaseDetailbydate.getPv().compareTo(BigDecimal.ZERO)>0) {
-                BigDecimal pvRate = baseDetailbydate.getPv() == null ?  BigDecimal.ZERO : baseDetailbydate.getPv().divide(totalBaseDetailbydate.getPv(),4,BigDecimal.ROUND_HALF_UP);
+                BigDecimal pvRate = baseDetailbydate.getPv() == null ?  BigDecimal.ZERO : baseDetailbydate.getPv().divide(totalBaseDetailbydate.getPv(),5,RoundingMode.DOWN);
                 accesslogFlowDetail.setPvRate(pvRate);
             }
             if (totalBaseDetailbydate.getRequestLength() != null && totalBaseDetailbydate.getRequestLength().compareTo(BigDecimal.ZERO)>0) {
-                BigDecimal requestLengthRate = baseDetailbydate.getRequestLength() == null ? BigDecimal.ZERO : baseDetailbydate.getRequestLength().divide(totalBaseDetailbydate.getRequestLength(),4,BigDecimal.ROUND_HALF_UP);
+                BigDecimal requestLengthRate = baseDetailbydate.getRequestLength() == null ? BigDecimal.ZERO : baseDetailbydate.getRequestLength().divide(totalBaseDetailbydate.getRequestLength(),5,RoundingMode.DOWN);
                 accesslogFlowDetail.setRequestLengthRate(requestLengthRate);
             }
             if (totalBaseDetailbydate.getBodyBytesSent() != null && totalBaseDetailbydate.getBodyBytesSent().compareTo(BigDecimal.ZERO)>0) {
-                BigDecimal bodyBytesSentRate = baseDetailbydate.getBodyBytesSent() == null ? BigDecimal.ZERO : baseDetailbydate.getBodyBytesSent().divide(totalBaseDetailbydate.getBodyBytesSent(),4,BigDecimal.ROUND_HALF_UP);
+                BigDecimal bodyBytesSentRate = baseDetailbydate.getBodyBytesSent() == null ? BigDecimal.ZERO : baseDetailbydate.getBodyBytesSent().divide(totalBaseDetailbydate.getBodyBytesSent(),5,RoundingMode.DOWN);
                 accesslogFlowDetail.setBodyBytesSentRate(bodyBytesSentRate);
             }
             if (totalBaseDetailbydate.getIpCount() != null && totalBaseDetailbydate.getIpCount().compareTo(BigDecimal.ZERO)>0) {
-                BigDecimal ipCountRate = baseDetailbydate.getIpCount() == null ? BigDecimal.ZERO : baseDetailbydate.getIpCount().divide(totalBaseDetailbydate.getIpCount(),4,BigDecimal.ROUND_HALF_UP);
+                BigDecimal ipCountRate = baseDetailbydate.getIpCount() == null ? BigDecimal.ZERO : baseDetailbydate.getIpCount().divide(totalBaseDetailbydate.getIpCount(),5,RoundingMode.DOWN);
                 accesslogFlowDetail.setIpCountRate(ipCountRate);
             }
 //            if (totalBaseDetailbydate.getVisitCount() > 0) {

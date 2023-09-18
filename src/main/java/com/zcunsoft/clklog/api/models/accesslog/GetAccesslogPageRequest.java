@@ -7,7 +7,7 @@ import lombok.Data;
 
 @Schema(description = "日志分页")
 @Data
-public class GetAccesslogPageRequest  {
+public class GetAccesslogPageRequest  extends AccesslogBaseSort {
 
     @Schema(description = "页码", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private int pageNum;
