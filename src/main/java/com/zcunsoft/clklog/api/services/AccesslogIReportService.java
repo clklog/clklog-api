@@ -29,4 +29,6 @@ public interface AccesslogIReportService {
 	GetAccesslogPageResponse getIpDetail(GetAccesslogPageRequest getAccesslogPageRequest);
 	
 	GetAccesslogPageResponse getUriDetailByIp(GetAccesslogPageRequest getAccesslogPageRequest);
+	
+	GetAccesslogPageResponse getSourceWebsiteDetail(GetAccesslogPageRequest getAccesslogPageRequest);
 }

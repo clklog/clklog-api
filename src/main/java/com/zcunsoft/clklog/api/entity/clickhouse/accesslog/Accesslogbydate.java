@@ -15,7 +15,7 @@ public class Accesslogbydate  {
 
 	@Id
     @Column
-    Timestamp timeDatepart;
+    Timestamp statDate;
 	
     @Column
     String host;
@@ -61,4 +61,7 @@ public class Accesslogbydate  {
 	
 	@Column
     Timestamp logTime;
+	
+	@Column
+	String httpReferer;
 }

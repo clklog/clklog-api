@@ -12,6 +12,11 @@ import lombok.Data;
 @Schema(description = "应用流量信息")
 @Data
 public class AccesslogFlowDetail {
+	
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "统计时间")
+    private String statTime;
+	
     @Schema(description = "主机")
     private String host;
     
@@ -72,5 +77,8 @@ public class AccesslogFlowDetail {
     @Schema(description = "访问时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Timestamp logTime;
+    
+    @Schema(description = "来源网站")
+    private String httpReferer;
     
 }

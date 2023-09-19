@@ -106,8 +106,8 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 	
 	
 
-	@Override
-	public GetAccesslogResponse getHostOverview(GetAccesslogRequest getAccesslogRequest) {
+	
+	private GetAccesslogResponse getHostOverviewByHour(GetAccesslogRequest getAccesslogRequest) {
 		MapSqlParameterSource paramMap = new MapSqlParameterSource();
 		String getListSql = "select host as host,count(1) as pv,sum(request_length) as request_length,sum(body_bytes_sent) as body_bytes_sent,countDistinct(x_forward_for) as ip_count,sum(request_time) as visit_time from nginx_access t ";
 		String getSummarySql ="select sum(t1.pv) as pv,sum(t1.request_length) as request_length,sum(t1.body_bytes_sent) as body_bytes_sent,sum(t1.ip_count) as ip_count,sum(t1.visit_time) as visit_time  from (";
@@ -127,18 +127,6 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		Accesslogbydate totalAccesslogbydate = clickHouseJdbcTemplate.queryForObject(getSummarySql, paramMap,
 				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
 		List<AccesslogFlowDetail> accesslogDetailList = new ArrayList<>();
-//		Timestamp startTime = transformFilterTime(getAccesslogRequest.getStartTime(), true, getAccesslogRequest.getTimeType());
-//        Timestamp endTime = transformFilterTime(getAccesslogRequest.getEndTime(), false, getAccesslogRequest.getTimeType());
-//        if ("hour".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
-//            flowDetailList = getFlowTrendByHour(paramMap, totalFlowDetail, where);
-//        } else if ("day".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
-//            flowDetailList = getFlowTrendByDate(flowTrendbydateList, totalFlowDetail, startTime, endTime);
-//        } else if ("week".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
-//            flowDetailList = getFlowTrendByWeek(flowTrendbydateList, totalFlowDetail, startTime, endTime);
-//        } else if ("month".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
-//            flowDetailList = getFlowTrendByMonth(flowTrendbydateList, totalFlowDetail, startTime, endTime);
-//        }
-		
 		GetAccesslogResponse response = new GetAccesslogResponse();
 		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
 			AccesslogFlowDetail accesslogFlowDetail = assemblyFlowDetail(accesslogbydate, totalAccesslogbydate);
@@ -149,7 +137,54 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		return response;
 	}
 	
+	@Override
+	public GetAccesslogResponse getHostOverview(GetAccesslogRequest getAccesslogRequest) {
+        if (StringUtils.isEmpty(getAccesslogRequest.getTimeType())) {
+        	return getHostOverviewByHour(getAccesslogRequest);
+        } else {
+        	return getHostOverviewByTimeType(getAccesslogRequest);
+        }
+
+	}
 	
+	private GetAccesslogResponse getHostOverviewByTimeType(GetAccesslogRequest getAccesslogRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+		String getListSql = "select _time_datepart as stat_date,count(1) as pv,sum(request_length) as request_length,sum(body_bytes_sent) as body_bytes_sent,countDistinct(x_forward_for) as ip_count,sum(request_time) as visit_time from nginx_access t ";
+		String where = "";
+        where = buildHostFilter(getAccesslogRequest.getHost(), paramMap, where);
+        where = buildStatDateStartFilter(getAccesslogRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(getAccesslogRequest.getEndTime(), paramMap, where);
+		if (StringUtils.isNotBlank(where)) {
+			getListSql += " where " + where.substring(4);
+		}
+		getListSql += " group by _time_datepart " + getSortSqlFormat(getAccesslogRequest.getSortName(), getAccesslogRequest.getSortOrder(), "_time_datepart");
+		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
+				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
+		Accesslogbydate totalAccesslogbydate = new Accesslogbydate();
+		totalAccesslogbydate.setPv(BigDecimal.ZERO);
+		totalAccesslogbydate.setRequestLength(BigDecimal.ZERO);
+		totalAccesslogbydate.setBodyBytesSent(BigDecimal.ZERO);
+		totalAccesslogbydate.setIpCount(BigDecimal.ZERO);
+		for(Accesslogbydate accesslogbydate : accesslogbydateList) {
+			accesslogbydate.setPv(totalAccesslogbydate.getPv().add(accesslogbydate.getPv()));
+			accesslogbydate.setRequestLength(totalAccesslogbydate.getRequestLength().add(accesslogbydate.getRequestLength()));
+			accesslogbydate.setBodyBytesSent(totalAccesslogbydate.getBodyBytesSent().add(accesslogbydate.getBodyBytesSent()));
+			accesslogbydate.setIpCount(totalAccesslogbydate.getIpCount().add(accesslogbydate.getIpCount()));
+		}
+		List<AccesslogFlowDetail> accesslogDetailList =  new ArrayList<AccesslogFlowDetail>();
+		Timestamp startTime = transformFilterTime(getAccesslogRequest.getStartTime(), true, getAccesslogRequest.getTimeType());
+        Timestamp endTime = transformFilterTime(getAccesslogRequest.getEndTime(), false, getAccesslogRequest.getTimeType());
+        if ("day".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
+         accesslogDetailList = getFlowTrendByDate(accesslogbydateList, totalAccesslogbydate, startTime, endTime);
+        } else if ("week".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
+        	 accesslogDetailList = getFlowTrendByWeek(accesslogbydateList, totalAccesslogbydate, startTime, endTime);
+        } else if ("month".equalsIgnoreCase(getAccesslogRequest.getTimeType())) {
+        	accesslogDetailList = getFlowTrendByMonth(accesslogbydateList, totalAccesslogbydate, startTime, endTime);
+        }
+        GetAccesslogResponse response = new GetAccesslogResponse();
+		response.setData(accesslogDetailList);
+		return response;
+	}
 
 	@Override
 	public GetAccesslogOverviewResponse getOverview(GetAccesslogRequest getAccesslogRequest) {
@@ -377,6 +412,51 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		return response;
 	}
 	
+	
+	
+	
+	@Override
+	public GetAccesslogPageResponse getSourceWebsiteDetail(GetAccesslogPageRequest getAccesslogPageRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+		String getListSql = "SELECT http_referer as http_referer ,count(1) AS pv,countDistinct(x_forward_for) as ip_count FROM nginx_access t ";
+		String getCountSql = "SELECT count(1) from (SELECT http_referer as ip FROM nginx_access t ";
+		String where = "";
+        where = buildHostFilter(getAccesslogPageRequest.getHost(), paramMap, where);
+        where = buildStatDateStartFilter(getAccesslogPageRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(getAccesslogPageRequest.getEndTime(), paramMap, where);
+//        where = buildStatusFilter(getAccesslogPageRequest.getStatus(), paramMap, where);
+		if (StringUtils.isNotBlank(where)) {
+			getListSql += " where " + where.substring(4);
+			getCountSql += " where " + where.substring(4);
+		}
+		getCountSql += " GROUP BY t.http_referer) t";
+		getListSql += " GROUP BY http_referer " + getSortSqlFormat(getAccesslogPageRequest.getSortName(), getAccesslogPageRequest.getSortOrder(), "pv");
+		getListSql += " limit " + (getAccesslogPageRequest.getPageNum() - 1) * getAccesslogPageRequest.getPageSize() + "," + getAccesslogPageRequest.getPageSize();
+		List<Accesslogbydate> accesslogbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
+				new BeanPropertyRowMapper<Accesslogbydate>(Accesslogbydate.class));
+		Integer total = clickHouseJdbcTemplate.queryForObject(getCountSql, paramMap, Integer.class);
+		
+		GetAccesslogRequest getAccesslogRequest = new GetAccesslogRequest();
+		BeanUtils.copyProperties(getAccesslogPageRequest, getAccesslogRequest);
+		Accesslogbydate totalAccesslogbydate = getTotalAccesslogbydate(getAccesslogRequest);
+		List<AccesslogFlowDetail> accesslogDetailList = new ArrayList<>();
+
+		GetAccesslogPageResponse response = new GetAccesslogPageResponse();
+		GetAccesslogPageResponseData responseData = new GetAccesslogPageResponseData();
+		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
+			AccesslogFlowDetail accesslogFlowDetail = assemblyFlowDetail(accesslogbydate, totalAccesslogbydate);
+			accesslogFlowDetail.setHttpReferer(accesslogbydate.getHttpReferer());
+			accesslogDetailList.add(accesslogFlowDetail);
+		}
+		responseData.setRows(accesslogDetailList);
+		responseData.setTotal(total);
+		response.setData(responseData);
+		return response;
+	}
+
+
+
+
 	private static String getSortSqlFormat(String sortName,String sortOrder,String defalutSortName) {
     	
     	if("p".equals(sortName)) {
@@ -499,7 +579,7 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		GetAccesslogPageResponseData responseData = new GetAccesslogPageResponseData();
 		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
 			Map<String, Object> map = new HashMap<String, Object>();
-			map.put("time", yMdFORMAT.get().format(accesslogbydate.getTimeDatepart()));
+			map.put("time", yMdFORMAT.get().format(accesslogbydate.getStatDate()));
 //			map.put("visitCount", accesslogbydate.getVisitCount());
 			accesslogDetailList.add(map);
 		}
@@ -528,7 +608,7 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
 		GetAccesslogResponse response = new GetAccesslogResponse();
 		for (Accesslogbydate accesslogbydate : accesslogbydateList) {
 			Map<String, Object> map = new HashMap<String, Object>();
-			map.put("time", yMdFORMAT.get().format(accesslogbydate.getTimeDatepart()));
+			map.put("time", yMdFORMAT.get().format(accesslogbydate.getStatDate()));
 //			map.put("visitCount", accesslogbydate.getVisitCount());
 			accesslogDetailList.add(map);
 		}
@@ -606,49 +686,46 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
         return flowDetailList;
     }
 
-    private List<FlowDetail> getFlowTrendByDate(List<FlowTrendbydate> flowTrendbydateList, FlowDetail totalFlowDetail, Timestamp startTime, Timestamp endTime) {
-        List<FlowDetail> flowDetailList = new ArrayList<>();
+    private List<AccesslogFlowDetail> getFlowTrendByDate(List<Accesslogbydate> flowTrendbydateList, Accesslogbydate totalFlowDetail, Timestamp startTime, Timestamp endTime) {
+        List<AccesslogFlowDetail> flowDetailList = new ArrayList<>();
 
         Timestamp tmpTime = startTime;
         int j = 0;
         do {
-            FlowDetail flowDetail = new FlowDetail();
+        	AccesslogFlowDetail flowDetail = new AccesslogFlowDetail();
             flowDetail.setStatTime(this.yMdFORMAT.get().format(tmpTime));
             Timestamp statDate = tmpTime;
 
-            Optional<FlowTrendbydate> optionalFlowTrendbydate = flowTrendbydateList.stream().filter(f -> f.getStatDate().equals(statDate)).findAny();
+            Optional<Accesslogbydate> optionalFlowTrendbydate = flowTrendbydateList.stream().filter(f -> f.getStatDate().equals(statDate)).findAny();
             if (optionalFlowTrendbydate.isPresent()) {
-                FlowTrendbydate flowTrendbydate = optionalFlowTrendbydate.get();
+            	Accesslogbydate flowTrendbydate = optionalFlowTrendbydate.get();
                 flowDetail.setVisitTime(flowTrendbydate.getVisitTime());
                 flowDetail.setPv(flowTrendbydate.getPv());
                 flowDetail.setIpCount(flowTrendbydate.getIpCount());
-                flowDetail.setVisitCount(flowTrendbydate.getVisitCount());
-                flowDetail.setUv(flowTrendbydate.getUv());
-                flowDetail.setNewUv(flowTrendbydate.getNewUv());
-                flowDetail.setChannel(LibType.getName(flowTrendbydate.getLib()));
-                flowDetail.setAvgPv(0);
-                flowDetail.setAvgVisitTime(0);
-                flowDetail.setBounceRate(0);
-                flowDetail.setNewUvRate(0.0f);
-                flowDetail.setPvRate(0.0f);
-                if (flowDetail.getVisitCount() > 0) {
-
-                    float avgPv = flowTrendbydate.getPv() * 1.0f / flowTrendbydate.getVisitCount();
-                    flowDetail.setAvgPv(Float.parseFloat(decimalFormat.get().format(avgPv)));
-
-                    float avgVisitTime = flowTrendbydate.getVisitTime() * 1.0f / flowTrendbydate.getVisitCount();
-                    flowDetail.setAvgVisitTime(Float.parseFloat(decimalFormat.get().format(avgVisitTime)));
-
-                    float bounceRate = flowTrendbydate.getBounceCount() * 1.0f / flowTrendbydate.getVisitCount();
-                    flowDetail.setBounceRate(Float.parseFloat(decimalFormat.get().format(bounceRate*100)));
+                flowDetail.setRequestLength(flowTrendbydate.getRequestLength());
+                flowDetail.setBodyBytesSent(flowTrendbydate.getBodyBytesSent());
+                flowDetail.setHost(flowTrendbydate.getHost());
+                if (flowTrendbydate.getIpCount() != null && flowTrendbydate.getIpCount().compareTo(BigDecimal.ZERO)>0) {
+                    BigDecimal avgVisitTime = flowTrendbydate.getVisitTime().divide(flowTrendbydate.getIpCount(),5,RoundingMode.DOWN);
+                    flowDetail.setAvgVisitTime(avgVisitTime);
                 }
-                if (flowDetail.getUv() > 0) {
-                    float newUvRate = flowTrendbydate.getNewUv() * 1.0f / flowTrendbydate.getUv();
-                    flowDetail.setNewUvRate(Float.parseFloat(decimalFormat.get().format(newUvRate*100)));
-                }
-                if (totalFlowDetail != null && totalFlowDetail.getPv() > 0) {
-                    float pvRate = flowTrendbydate.getPv() * 1.0f / totalFlowDetail.getPv();
-                    flowDetail.setPvRate(Float.parseFloat(decimalFormat.get().format(pvRate*100)));
+                if (totalFlowDetail != null) {
+                    if (totalFlowDetail.getPv() != null && totalFlowDetail.getPv().compareTo(BigDecimal.ZERO)>0) {
+                        BigDecimal pvRate = flowTrendbydate.getPv() == null ?  BigDecimal.ZERO : flowTrendbydate.getPv().divide(totalFlowDetail.getPv(),5,RoundingMode.DOWN);
+                        flowDetail.setPvRate(pvRate);
+                    }
+                    if (totalFlowDetail.getRequestLength() != null && totalFlowDetail.getRequestLength().compareTo(BigDecimal.ZERO)>0) {
+                        BigDecimal requestLengthRate = flowTrendbydate.getRequestLength() == null ? BigDecimal.ZERO : flowTrendbydate.getRequestLength().divide(totalFlowDetail.getRequestLength(),5,RoundingMode.DOWN);
+                        flowDetail.setRequestLengthRate(requestLengthRate);
+                    }
+                    if (totalFlowDetail.getBodyBytesSent() != null && totalFlowDetail.getBodyBytesSent().compareTo(BigDecimal.ZERO)>0) {
+                        BigDecimal bodyBytesSentRate = flowTrendbydate.getBodyBytesSent() == null ? BigDecimal.ZERO : flowTrendbydate.getBodyBytesSent().divide(totalFlowDetail.getBodyBytesSent(),5,RoundingMode.DOWN);
+                        flowDetail.setBodyBytesSentRate(bodyBytesSentRate);
+                    }
+                    if (totalFlowDetail.getIpCount() != null && totalFlowDetail.getIpCount().compareTo(BigDecimal.ZERO)>0) {
+                        BigDecimal ipCountRate = flowTrendbydate.getIpCount() == null ? BigDecimal.ZERO : flowTrendbydate.getIpCount().divide(totalFlowDetail.getIpCount(),5,RoundingMode.DOWN);
+                        flowDetail.setIpCountRate(ipCountRate);
+                    }
                 }
             }
             flowDetailList.add(flowDetail);
@@ -658,8 +735,8 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
         return flowDetailList;
     }
 
-    private List<FlowDetail> getFlowTrendByWeek(List<FlowTrendbydate> flowTrendbydateList, FlowDetail totalFlowDetail, Timestamp startTime, Timestamp endTime) {
-        List<FlowDetail> flowDetailList = new ArrayList<>();
+    private List<AccesslogFlowDetail> getFlowTrendByWeek(List<Accesslogbydate> flowTrendbydateList, Accesslogbydate totalFlowDetail, Timestamp startTime, Timestamp endTime) {
+        List<AccesslogFlowDetail> flowDetailList = new ArrayList<>();
 
         Timestamp tmpTime = startTime;
         int j = 0;
@@ -672,34 +749,29 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
                 weekframe[1] = endTime.getTime();
             }
 
-            FlowDetail weekFlowDetail = new FlowDetail();
+            AccesslogFlowDetail weekFlowDetail = new AccesslogFlowDetail();
             String statTime = this.yMdFORMAT.get().format(new Timestamp(weekframe[0]));
             if (weekframe[1] != weekframe[0]) {
                 statTime += " - " + this.yMdFORMAT.get().format(new Timestamp(weekframe[1]));
             }
             weekFlowDetail.setStatTime(statTime);
-            weekFlowDetail.setAvgPv(0);
-            weekFlowDetail.setAvgVisitTime(0);
-            weekFlowDetail.setBounceRate(0);
-            weekFlowDetail.setNewUvRate(0.0f);
-            weekFlowDetail.setPvRate(0.0f);
-            int totalVisitTime = 0;
-            int totalBounceCount = 0;
+            weekFlowDetail.setVisitTime(BigDecimal.ZERO);
+            weekFlowDetail.setPv(BigDecimal.ZERO);
+            weekFlowDetail.setIpCount(BigDecimal.ZERO);
+            weekFlowDetail.setRequestLength(BigDecimal.ZERO);
+            weekFlowDetail.setBodyBytesSent(BigDecimal.ZERO);
+
 
             for (int i = j; i < flowTrendbydateList.size(); i++) {
-                FlowTrendbydate flowTrendbydate = flowTrendbydateList.get(i);
+            	Accesslogbydate flowTrendbydate = flowTrendbydateList.get(i);
                 Timestamp statDate = flowTrendbydate.getStatDate();
                 long lStatDate = statDate.getTime();
                 if (lStatDate >= weekframe[0] && lStatDate <= weekframe[1]) {
-                    weekFlowDetail.setPv(weekFlowDetail.getPv() + flowTrendbydate.getPv());
-                    weekFlowDetail.setIpCount(weekFlowDetail.getIpCount() + flowTrendbydate.getIpCount());
-                    weekFlowDetail.setVisitCount(weekFlowDetail.getVisitCount() + flowTrendbydate.getVisitCount());
-                    weekFlowDetail.setUv(weekFlowDetail.getUv() + flowTrendbydate.getUv());
-                    weekFlowDetail.setNewUv(weekFlowDetail.getNewUv() + flowTrendbydate.getNewUv());
-                    weekFlowDetail.setChannel(LibType.getName(flowTrendbydate.getLib()));
-                    weekFlowDetail.setVisitTime(weekFlowDetail.getVisitTime() + flowTrendbydate.getVisitTime());
-                    totalVisitTime += flowTrendbydate.getVisitTime();
-                    totalBounceCount += flowTrendbydate.getBounceCount();
+                	weekFlowDetail.setVisitTime(flowTrendbydate.getVisitTime().add(weekFlowDetail.getVisitTime()));
+                	weekFlowDetail.setPv(flowTrendbydate.getPv().add(weekFlowDetail.getPv()));
+                    weekFlowDetail.setIpCount(flowTrendbydate.getIpCount().add(weekFlowDetail.getIpCount()));
+                    weekFlowDetail.setRequestLength(flowTrendbydate.getRequestLength().add(weekFlowDetail.getRequestLength()));
+                    weekFlowDetail.setBodyBytesSent(flowTrendbydate.getBodyBytesSent().add(weekFlowDetail.getBodyBytesSentRate()));
                     j++;
                 }
                 if (lStatDate > weekframe[1]) {
@@ -707,23 +779,27 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
                 }
             }
 
-            if (weekFlowDetail.getVisitCount() > 0) {
-                float avgPv = weekFlowDetail.getPv() * 1.0f / weekFlowDetail.getVisitCount();
-                weekFlowDetail.setAvgPv(Float.parseFloat(decimalFormat.get().format(avgPv)));
-
-                float avgVisitTime = totalVisitTime * 1.0f / weekFlowDetail.getVisitCount();
-                weekFlowDetail.setAvgVisitTime(Float.parseFloat(decimalFormat.get().format(avgVisitTime)));
-
-                float bounceRate = totalBounceCount * 1.0f / weekFlowDetail.getVisitCount();
-                weekFlowDetail.setBounceRate(Float.parseFloat(decimalFormat.get().format(bounceRate*100)));
+            if (weekFlowDetail.getIpCount() != null && weekFlowDetail.getIpCount().compareTo(BigDecimal.ZERO)>0) {
+                BigDecimal avgVisitTime = weekFlowDetail.getVisitTime().divide(totalFlowDetail.getIpCount(),5,RoundingMode.DOWN);
+                weekFlowDetail.setAvgVisitTime(avgVisitTime);
             }
-            if (weekFlowDetail.getUv() > 0) {
-                float newUvRate = weekFlowDetail.getNewUv() * 1.0f / weekFlowDetail.getUv();
-                weekFlowDetail.setNewUvRate(Float.parseFloat(decimalFormat.get().format(newUvRate*100)));
-            }
-            if (totalFlowDetail != null && totalFlowDetail.getPv() > 0) {
-                float pvRate = weekFlowDetail.getPv() * 1.0f / totalFlowDetail.getPv();
-                weekFlowDetail.setPvRate(Float.parseFloat(decimalFormat.get().format(pvRate*100)));
+            if (totalFlowDetail != null) {
+                if (totalFlowDetail.getPv() != null && totalFlowDetail.getPv().compareTo(BigDecimal.ZERO)>0) {
+                    BigDecimal pvRate = weekFlowDetail.getPv() == null ?  BigDecimal.ZERO : weekFlowDetail.getPv().divide(totalFlowDetail.getPv(),5,RoundingMode.DOWN);
+                    weekFlowDetail.setPvRate(pvRate);
+                }
+                if (totalFlowDetail.getRequestLength() != null && totalFlowDetail.getRequestLength().compareTo(BigDecimal.ZERO)>0) {
+                    BigDecimal requestLengthRate = weekFlowDetail.getRequestLength() == null ? BigDecimal.ZERO : weekFlowDetail.getRequestLength().divide(totalFlowDetail.getRequestLength(),5,RoundingMode.DOWN);
+                    weekFlowDetail.setRequestLengthRate(requestLengthRate);
+                }
+                if (totalFlowDetail.getBodyBytesSent() != null && totalFlowDetail.getBodyBytesSent().compareTo(BigDecimal.ZERO)>0) {
+                    BigDecimal bodyBytesSentRate = weekFlowDetail.getBodyBytesSent() == null ? BigDecimal.ZERO : weekFlowDetail.getBodyBytesSent().divide(totalFlowDetail.getBodyBytesSent(),5,RoundingMode.DOWN);
+                    weekFlowDetail.setBodyBytesSentRate(bodyBytesSentRate);
+                }
+                if (totalFlowDetail.getIpCount() != null && totalFlowDetail.getIpCount().compareTo(BigDecimal.ZERO)>0) {
+                    BigDecimal ipCountRate = weekFlowDetail.getIpCount() == null ? BigDecimal.ZERO : weekFlowDetail.getIpCount().divide(totalFlowDetail.getIpCount(),5,RoundingMode.DOWN);
+                    weekFlowDetail.setIpCountRate(ipCountRate);
+                }
             }
             flowDetailList.add(weekFlowDetail);
             tmpTime = new Timestamp(weekframe[1] + DateUtils.MILLIS_PER_DAY);
@@ -732,8 +808,8 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
         return flowDetailList;
     }
 
-    private List<FlowDetail> getFlowTrendByMonth(List<FlowTrendbydate> flowTrendbydateList, FlowDetail totalFlowDetail, Timestamp startTime, Timestamp endTime) {
-        List<FlowDetail> flowDetailList = new ArrayList<>();
+    private List<AccesslogFlowDetail> getFlowTrendByMonth(List<Accesslogbydate> flowTrendbydateList, Accesslogbydate totalFlowDetail, Timestamp startTime, Timestamp endTime) {
+        List<AccesslogFlowDetail> flowDetailList = new ArrayList<>();
 
         Timestamp tmpTime = startTime;
         int j = 0;
@@ -746,34 +822,28 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
                 monthframe[1] = endTime.getTime();
             }
 
-            FlowDetail monthlowDetail = new FlowDetail();
+            AccesslogFlowDetail monthlowDetail = new AccesslogFlowDetail();
             String statTime = this.yMdFORMAT.get().format(new Timestamp(monthframe[0]));
             if (monthframe[1] != monthframe[0]) {
                 statTime += " - " + this.yMdFORMAT.get().format(new Timestamp(monthframe[1]));
             }
             monthlowDetail.setStatTime(statTime);
-            monthlowDetail.setAvgPv(0);
-            monthlowDetail.setAvgVisitTime(0);
-            monthlowDetail.setBounceRate(0);
-            monthlowDetail.setNewUvRate(0.0f);
-            monthlowDetail.setPvRate(0.0f);
-            int totalVisitTime = 0;
-            int totalBounceCount = 0;
+            monthlowDetail.setVisitTime(BigDecimal.ZERO);
+            monthlowDetail.setPv(BigDecimal.ZERO);
+            monthlowDetail.setIpCount(BigDecimal.ZERO);
+            monthlowDetail.setRequestLength(BigDecimal.ZERO);
+            monthlowDetail.setBodyBytesSent(BigDecimal.ZERO);
 
             for (int i = j; i < flowTrendbydateList.size(); i++) {
-                FlowTrendbydate flowTrendbydate = flowTrendbydateList.get(i);
+            	Accesslogbydate flowTrendbydate = flowTrendbydateList.get(i);
                 Timestamp statDate = flowTrendbydate.getStatDate();
                 long lStatDate = statDate.getTime();
                 if (lStatDate >= monthframe[0] && lStatDate <= monthframe[1]) {
-                    monthlowDetail.setPv(monthlowDetail.getPv() + flowTrendbydate.getPv());
-                    monthlowDetail.setIpCount(monthlowDetail.getIpCount() + flowTrendbydate.getIpCount());
-                    monthlowDetail.setVisitCount(monthlowDetail.getVisitCount() + flowTrendbydate.getVisitCount());
-                    monthlowDetail.setUv(monthlowDetail.getUv() + flowTrendbydate.getUv());
-                    monthlowDetail.setNewUv(monthlowDetail.getNewUv() + flowTrendbydate.getNewUv());
-                    monthlowDetail.setChannel(LibType.getName(flowTrendbydate.getLib()));
-                    monthlowDetail.setVisitTime(monthlowDetail.getVisitTime() + flowTrendbydate.getVisitTime());
-                    totalVisitTime += flowTrendbydate.getVisitTime();
-                    totalBounceCount += flowTrendbydate.getBounceCount();
+                	monthlowDetail.setVisitTime(flowTrendbydate.getVisitTime().add(monthlowDetail.getVisitTime()));
+                	monthlowDetail.setPv(flowTrendbydate.getPv().add(monthlowDetail.getPv()));
+                	monthlowDetail.setIpCount(flowTrendbydate.getIpCount().add(monthlowDetail.getIpCount()));
+                	monthlowDetail.setRequestLength(flowTrendbydate.getRequestLength().add(monthlowDetail.getRequestLength()));
+                	monthlowDetail.setBodyBytesSent(flowTrendbydate.getBodyBytesSent().add(monthlowDetail.getBodyBytesSentRate()));
                     j++;
                 }
                 if (lStatDate > monthframe[1]) {
@@ -781,23 +851,27 @@ public class AccesslogReportServiceImpl implements AccesslogIReportService {
                 }
             }
 
-            if (monthlowDetail.getVisitCount() > 0) {
-                float avgPv = monthlowDetail.getPv() * 1.0f / monthlowDetail.getVisitCount();
-                monthlowDetail.setAvgPv(Float.parseFloat(decimalFormat.get().format(avgPv)));
-
-                float avgVisitTime = totalVisitTime * 1.0f / monthlowDetail.getVisitCount();
-                monthlowDetail.setAvgVisitTime(Float.parseFloat(decimalFormat.get().format(avgVisitTime)));
-
-                float bounceRate = totalBounceCount * 1.0f / monthlowDetail.getVisitCount();
-                monthlowDetail.setBounceRate(Float.parseFloat(decimalFormat.get().format(bounceRate*100)));
+            if (monthlowDetail.getIpCount() != null && monthlowDetail.getIpCount().compareTo(BigDecimal.ZERO)>0) {
+                BigDecimal avgVisitTime = monthlowDetail.getVisitTime().divide(totalFlowDetail.getIpCount(),5,RoundingMode.DOWN);
+                monthlowDetail.setAvgVisitTime(avgVisitTime);
             }
-            if (monthlowDetail.getUv() > 0) {
-                float newUvRate = monthlowDetail.getNewUv() * 1.0f / monthlowDetail.getUv();
-                monthlowDetail.setNewUvRate(Float.parseFloat(decimalFormat.get().format(newUvRate*100)));
-            }
-            if (totalFlowDetail != null && totalFlowDetail.getPv() > 0) {
-                float pvRate = monthlowDetail.getPv() * 1.0f / totalFlowDetail.getPv();
-                monthlowDetail.setPvRate(Float.parseFloat(decimalFormat.get().format(pvRate*100)));
+            if (totalFlowDetail != null) {
+                if (totalFlowDetail.getPv() != null && totalFlowDetail.getPv().compareTo(BigDecimal.ZERO)>0) {
+                    BigDecimal pvRate = monthlowDetail.getPv() == null ?  BigDecimal.ZERO : monthlowDetail.getPv().divide(totalFlowDetail.getPv(),5,RoundingMode.DOWN);
+                    monthlowDetail.setPvRate(pvRate);
+                }
+                if (totalFlowDetail.getRequestLength() != null && totalFlowDetail.getRequestLength().compareTo(BigDecimal.ZERO)>0) {
+                    BigDecimal requestLengthRate = monthlowDetail.getRequestLength() == null ? BigDecimal.ZERO : monthlowDetail.getRequestLength().divide(totalFlowDetail.getRequestLength(),5,RoundingMode.DOWN);
+                    monthlowDetail.setRequestLengthRate(requestLengthRate);
+                }
+                if (totalFlowDetail.getBodyBytesSent() != null && totalFlowDetail.getBodyBytesSent().compareTo(BigDecimal.ZERO)>0) {
+                    BigDecimal bodyBytesSentRate = monthlowDetail.getBodyBytesSent() == null ? BigDecimal.ZERO : monthlowDetail.getBodyBytesSent().divide(totalFlowDetail.getBodyBytesSent(),5,RoundingMode.DOWN);
+                    monthlowDetail.setBodyBytesSentRate(bodyBytesSentRate);
+                }
+                if (totalFlowDetail.getIpCount() != null && totalFlowDetail.getIpCount().compareTo(BigDecimal.ZERO)>0) {
+                    BigDecimal ipCountRate = monthlowDetail.getIpCount() == null ? BigDecimal.ZERO : monthlowDetail.getIpCount().divide(totalFlowDetail.getIpCount(),5,RoundingMode.DOWN);
+                    monthlowDetail.setIpCountRate(ipCountRate);
+                }
             }
             flowDetailList.add(monthlowDetail);
             tmpTime = new Timestamp(monthframe[1] + DateUtils.MILLIS_PER_DAY);

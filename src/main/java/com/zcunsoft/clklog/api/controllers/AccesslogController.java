@@ -85,4 +85,10 @@ public class AccesslogController {
     public GetAccesslogPageResponse getUriDetailByIp(@RequestBody GetAccesslogPageRequest getAccesslogPageRequest,HttpServletRequest request) {
         return accesslogIReportService.getUriDetailByIp(getAccesslogPageRequest);
     }
+    
+    @Operation(summary = "获取来源网站信息")
+    @RequestMapping(path = "/getSourceWebsiteDetail", method = RequestMethod.POST)
+    public GetAccesslogPageResponse getSourceWebsiteDetail(@RequestBody GetAccesslogPageRequest getAccesslogPageRequest,HttpServletRequest request) {
+        return accesslogIReportService.getSourceWebsiteDetail(getAccesslogPageRequest);
+    }
 }
