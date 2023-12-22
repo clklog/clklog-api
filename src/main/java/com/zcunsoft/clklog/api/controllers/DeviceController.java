@@ -24,13 +24,13 @@ public class DeviceController {
     @Resource
     IReportService reportService;
 
-
+    /**
     @Operation(summary = "[弃用]获取设备访问统计数据")
     @RequestMapping(path = "/getDeviceDetail", method = RequestMethod.POST)
     public GetDeviceDetailResponse getDeviceDetail(@RequestBody GetDeviceDetailRequest getDeviceDetailRequest, HttpServletRequest request) {
         return reportService.getDeviceDetail(getDeviceDetailRequest);
     }
-
+	*/
     @Operation(summary = "分页获取设备访问统计数据")
     @RequestMapping(path = "/getDeviceDetailList", method = RequestMethod.POST)
     public GetDeviceDetailPageResponse getDeviceDetailList(@RequestBody GetDeviceDetailPageRequest getDeviceDetailPageRequest, HttpServletRequest request) {

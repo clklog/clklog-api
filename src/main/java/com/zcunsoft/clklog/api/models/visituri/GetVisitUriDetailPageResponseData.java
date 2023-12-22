@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.List;
 
 
-@Schema(description = "分页获取来源网站详情的响应")
+@Schema(description = "分页获取受访页面详情的响应")
 @Data
 public class GetVisitUriDetailPageResponseData {
 

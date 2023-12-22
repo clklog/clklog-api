@@ -52,13 +52,13 @@ public class AreaController {
     public GetAreaDetailTotalResponse getAreaDetailTotal(@RequestBody GetAreaDetailRequest getAreaDetailRequest, HttpServletRequest request) {
         return reportService.getAreaDetailTotal(getAreaDetailRequest);
     }
-    
+    /**
     @Operation(summary = "[弃用]按区域获取访问统计数据")
     @RequestMapping(path = "/getAreaDetailTop10", method = RequestMethod.POST)
     public GetAreaResponse getAreaDetailTop10(@RequestBody GetAreaDetailRequest getAreaDetailRequest, HttpServletRequest request) {
         return reportService.getAreaDetailTop10(getAreaDetailRequest);
     }
-    
+    */
     @Operation(summary = "分页获取按国家访问统计对比数据")
     @RequestMapping(path = "/getAreaDetailCountryListByCompare", method = RequestMethod.POST)
     public GetAreaDetailComparePageResponse getCountryDetailListByCompare(@RequestBody GetAreaDetailComparePageRequest getAreaDetailComparePageRequest, HttpServletRequest request) {

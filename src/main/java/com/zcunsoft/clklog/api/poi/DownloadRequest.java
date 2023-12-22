@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 public class DownloadRequest {
 
-    @Schema(description = "时间类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "hour,day,week,month")
+    @Schema(description = "时间类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "hour/day/week/month")
     private String timeType;
 
     @Schema(description = "渠道", requiredMode = Schema.RequiredMode.REQUIRED, example = "[\"安卓\",\"苹果\",\"网站\",\"微信小程序\"]")
@@ -22,7 +22,7 @@ public class DownloadRequest {
     @Schema(description = "地域", requiredMode = Schema.RequiredMode.REQUIRED, example = "[\"上海\",\"北京\",\"其他\"]")
     private List<String> province;
 
-    @Schema(description = "访客类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "新访客,老访客")
+    @Schema(description = "访客类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "新访客/老访客")
     private String visitorType;
 
     @Schema(description = "开始时间", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023-06-08")

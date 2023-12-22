@@ -220,8 +220,8 @@ public class ExportReportServiceImpl implements IExportReportService {
 
         if (StringUtils.isNotBlank(where)) {
             where = where.substring(4);
-            getListSql += " where t.province<>'all' and t.country<>'all' and " + where;
-            getSummarySql += " where t.province='all' and t.country='all' and " + where;
+            getListSql += " where t.province<>'all' and t.country<>'all' and t.city<> 'all' and t.country='中国' and " + where;
+            getSummarySql += " where t.province='all' and t.country='all' and t.city<> 'all' and t.country='中国' and " + where;
         }
         
         getListSql += " group by t.province,t.country ";
@@ -261,7 +261,7 @@ public class ExportReportServiceImpl implements IExportReportService {
 
         if (StringUtils.isNotBlank(where)) {
             where = where.substring(4);
-            getSummarySql += " where t.province='all' and t.country='all' and " + where;
+            getSummarySql += " where t.province='all' and t.country='all' and t.city='all' and " + where;
         }
         List<AreaDetailbydate> summaryAreaDetailbydate = clickHouseJdbcTemplate.query(getSummarySql, paramMap, new BeanPropertyRowMapper<AreaDetailbydate>(AreaDetailbydate.class));
 

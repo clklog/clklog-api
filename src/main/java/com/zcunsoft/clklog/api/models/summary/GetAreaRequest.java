@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class GetAreaRequest extends BaseSummaryRequest {
 
-	@Schema(description = "访客类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "新访客")
+	@Schema(description = "访客类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "新访客/老访客")
     private String visitorType;
 	
 }
