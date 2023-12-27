@@ -5,6 +5,7 @@ import com.zcunsoft.clklog.api.models.summary.GetFlowResponse;
 import com.zcunsoft.clklog.api.models.summary.GetFlowTrendRequest;
 import com.zcunsoft.clklog.api.models.summary.GetFlowTrendResponse;
 import com.zcunsoft.clklog.api.models.trend.GetFlowDetailResponse;
+import com.zcunsoft.clklog.api.models.trend.GetFlowPreviousMinTotalRequest;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTotalResponse;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailCompareRequest;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailCompareResponse;
@@ -41,13 +42,13 @@ public class FlowController {
         return reportService.getFlowTrend(getFlowTrendRequest);
     }
 
-
+    /**
     @Operation(summary = "[弃用]获取流量趋势详情")
     @RequestMapping(path = "/getFlowTrendDetail", method = RequestMethod.POST)
     public GetFlowTrendDetailResponse getFlowTrendDetail(@RequestBody GetFlowTrendDetailRequest getFlowTrendDetailRequest, HttpServletRequest request) {
         return reportService.getFlowTrendDetail(getFlowTrendDetailRequest);
     }
-
+	*/
     @Operation(summary = "获取流量合计数据")
     @RequestMapping(path = "/getFlowTotal", method = RequestMethod.POST)
     public GetFlowTotalResponse getFlowTotal(@RequestBody GetFlowTrendDetailRequest getFlowTrendDetailRequest, HttpServletRequest request) {
@@ -57,6 +58,9 @@ public class FlowController {
     @Operation(summary = "获取流量统计数据")
     @RequestMapping(path = "/getFlowDetail", method = RequestMethod.POST)
     public GetFlowDetailResponse getFlowDetail(@RequestBody GetFlowTrendDetailRequest getFlowTrendDetailRequest, HttpServletRequest request) {
+    	if(getFlowTrendDetailRequest.getPreviousHour() != null && getFlowTrendDetailRequest.getPreviousHour() > 0) {
+    		return reportService.getFlowDetailByPreviousHour(getFlowTrendDetailRequest);
+    	}
         return reportService.getFlowDetail(getFlowTrendDetailRequest);
     }
     
@@ -64,5 +68,11 @@ public class FlowController {
     @RequestMapping(path = "/getFlowDetailByCompare", method = RequestMethod.POST)
     public GetFlowTrendDetailCompareResponse getFlowDetailByCompare(@RequestBody GetFlowTrendDetailCompareRequest getFlowTrendDetailCompareRequest, HttpServletRequest request) {
         return reportService.getFlowDetailByCompare(getFlowTrendDetailCompareRequest);
+    }
+    
+    @Operation(summary = "获取流量近n分钟合计数据")
+    @RequestMapping(path = "/getFlowPreviousMinTotal", method = RequestMethod.POST)
+    public GetFlowTotalResponse getFlowPreviousMinTotal(@RequestBody GetFlowPreviousMinTotalRequest getFlowPreviousMinTotalRequest, HttpServletRequest request) {
+        return reportService.getFlowPreviousMinTotal(getFlowPreviousMinTotalRequest);
     }
 }

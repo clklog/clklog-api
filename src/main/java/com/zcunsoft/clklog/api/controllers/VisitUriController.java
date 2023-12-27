@@ -53,4 +53,40 @@ public class VisitUriController {
     public GetVisitUriListOfUriPathResponse getVisitUriListOfUriPath(@RequestBody GetVisitUriListOfUriPathRequest getVisitUriListOfUriPathRequest, HttpServletRequest request) {
         return reportService.getVisitUriListOfUriPath(getVisitUriListOfUriPathRequest);
     }
+    
+//    @Operation(summary = "[优化]分页获取受访页面访问统计数据")
+//    @RequestMapping(path = "/getVisitUriDetail", method = RequestMethod.POST)
+//    public GetVisitUriDetailPageResponse getVisitUriDetail(@RequestBody GetVisitUriDetailPageRequest getVisitUriDetailPageRequest, HttpServletRequest request) {
+//        return reportService.getVisitUriDetail(getVisitUriDetailPageRequest);
+//    }
+    
+    @Operation(summary = "[优化]分页获取退出页页面访问统计数据")
+    @RequestMapping(path = "/getVisitUriExitDetail", method = RequestMethod.POST)
+    public GetVisitUriExitDetailPageResponse getVisitUriExitDetail(@RequestBody GetVisitUriDetailPageRequest getVisitUriDetailPageRequest, HttpServletRequest request) {
+        return reportService.getVisitUriExitDetail(getVisitUriDetailPageRequest);
+    }
+    
+    @Operation(summary = "[优化]分页获取入口页页面访问统计数据")
+    @RequestMapping(path = "/getVisitUriEntryDetail", method = RequestMethod.POST)
+    public GetVisitUriEntryDetailPageResponse getVisitUriEntryDetail(@RequestBody GetVisitUriDetailPageRequest getVisitUriDetailPageRequest, HttpServletRequest request) {
+        return reportService.getVisitUriEntryDetail(getVisitUriDetailPageRequest);
+    }
+    
+    @Operation(summary = "[优化]分页获取贡献下游浏览量页页面访问统计数据")
+    @RequestMapping(path = "/getVisitUriDownpvDetail", method = RequestMethod.POST)
+    public GetVisitUriDownpvDetailPageResponse getVisitUriDownpvDetail(@RequestBody GetVisitUriDetailPageRequest getVisitUriDetailPageRequest, HttpServletRequest request) {
+        return reportService.getVisitUriDownpvDetail(getVisitUriDetailPageRequest);
+    }
+    
+    @Operation(summary = "获取单个受访页面访问统计数据")
+    @RequestMapping(path = "/getVisitUriDetailTotal", method = RequestMethod.POST)
+    public GetVisitUriTotalResponse getVisitUriDetailTotal(@RequestBody GetVisitUriDetailTotalRequest getVisitUriTrendRequest, HttpServletRequest request) {
+        return reportService.getVisitUriDetailTotal(getVisitUriTrendRequest);
+    }
+    
+    @Operation(summary = "获取单个受访页面访问趋势数据")
+    @RequestMapping(path = "/getVisitUriDetailTrend", method = RequestMethod.POST)
+    public GetVisitUriDetailTrendResponse getVisitUriDetailTrend(@RequestBody GetVisitUriDetailTrendRequest getVisitUriTrendDetailRequest, HttpServletRequest request) {
+        return reportService.getVisitUriDetailTrend(getVisitUriTrendDetailRequest);
+    }
 }

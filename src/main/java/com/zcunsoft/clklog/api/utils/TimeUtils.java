@@ -1,7 +1,12 @@
 package com.zcunsoft.clklog.api.utils;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class TimeUtils {
     public static long[] getCurrentWeekTimeFrame(Timestamp timestamp) {
@@ -110,4 +115,101 @@ public class TimeUtils {
         return timeString;
     }
 
+    
+    public static long getCurrentYesterday(Timestamp timestamp) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(timestamp);
+        calendar.add(Calendar.DAY_OF_WEEK, -1);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        long yesterdayTime = calendar.getTimeInMillis();
+
+        return yesterdayTime;
+    }
+    
+    public static long getGetOneWeekAgoDateByTimestamp(Timestamp timestamp) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(timestamp);
+        calendar.add(Calendar.DAY_OF_WEEK, -7);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        long yesterdayTime = calendar.getTimeInMillis();
+
+        return yesterdayTime;
+    }
+    
+    /**
+    public static long getGetOneMonthAgoDateByTimestamp(Timestamp timestamp) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(timestamp);
+        calendar.add(Calendar.WEEK_OF_MONTH, -1);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        long yesterdayTime = calendar.getTimeInMillis();
+
+        return yesterdayTime;
+    }
+    */
+    public static long getCurrentYesterday() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_WEEK, -1);
+        long yesterdayTime = calendar.getTimeInMillis();
+        return yesterdayTime;
+    }
+    
+    public static long getCurrent() {
+    	return Calendar.getInstance().getTimeInMillis();
+    }
+    
+    public static List<Calendar> getPreviousHoursTimes(Integer previousHour){
+    	List<Calendar> previousHoursTimes = new ArrayList<>();  
+        Calendar now = Calendar.getInstance();  
+        for (int i = 0; i < previousHour; i++) {  
+            Calendar hourBefore = (Calendar) now.clone();  
+            hourBefore.add(Calendar.HOUR_OF_DAY, -(previousHour-i));  
+            previousHoursTimes.add(hourBefore);  
+        } 
+        previousHoursTimes.add(now);
+        return previousHoursTimes;  
+    }
+    
+    public static long getCurrentPreviouseMinTime(Integer previousMin) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.MINUTE, -previousMin); 
+        return calendar.getTimeInMillis();
+    }
+    
+    public static long getCurrentPreviousMonthFirstDay(Timestamp timestamp) {
+    	Calendar calendar = Calendar.getInstance();
+        calendar.setTime(timestamp);
+        calendar.add(Calendar.MONTH, -1);
+        
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        return calendar.getTimeInMillis();
+    }
+    
+    public static long getCurrentPreviousMonthLasttDay(Timestamp timestamp) {
+    	Calendar calendar = Calendar.getInstance();
+        calendar.setTime(timestamp);
+        calendar.add(Calendar.MONTH, -1);
+        
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DATE));
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        return calendar.getTimeInMillis();
+    }
 }

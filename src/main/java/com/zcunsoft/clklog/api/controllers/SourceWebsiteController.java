@@ -22,18 +22,20 @@ public class SourceWebsiteController {
     @Resource
     IReportService reportService;
 
+    /**
     @Operation(summary = "[弃用]获取Top10来源网站")
     @RequestMapping(path = "/getSourceWebsite", method = RequestMethod.POST)
     public GetSourceWebsiteResponse getSourceWebsite(@RequestBody GetSourceWebsiteRequest getSourceWebsiteRequest, HttpServletRequest request) {
         return reportService.getSourceWebsite(getSourceWebsiteRequest);
     }
-
+     */
+    /**
     @Operation(summary = "[弃用]获取Top10来源网站详情")
     @RequestMapping(path = "/getSourceWebSiteDetailTop10", method = RequestMethod.POST)
     public GetSourceWebsiteDetailResponse getSourceWebSiteDetailTop10(@RequestBody GetSourceWebsiteDetailRequest getSourceWebsiteDetailRequest, HttpServletRequest request) {
         return reportService.getSourceSiteTop10(getSourceWebsiteDetailRequest);
     }
-
+     */
     @Operation(summary = "分页获取来源网站访问统计数据")
     @RequestMapping(path = "/getSourceWebSiteDetail", method = RequestMethod.POST)
     public GetSourceWebsiteDetailPageResponse getSourceWebSiteDetail(@RequestBody GetSourceWebsiteDetailPageRequest getSourceWebsiteDetailPageRequest, HttpServletRequest request) {

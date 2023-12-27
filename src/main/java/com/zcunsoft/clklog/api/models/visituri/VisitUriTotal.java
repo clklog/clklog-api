@@ -27,6 +27,7 @@ public class VisitUriTotal {
 	    @Schema(description = "跳出率")
 	    private Float bounceRate;
 	    
-	    
+	    @Schema(description = "入口页次数")
+	    private int entryCount;
 
 }

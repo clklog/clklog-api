@@ -21,6 +21,7 @@ import com.zcunsoft.clklog.api.models.searchword.GetSearchWordDetailResponse;
 import com.zcunsoft.clklog.api.models.sourcewebsite.*;
 import com.zcunsoft.clklog.api.models.summary.*;
 import com.zcunsoft.clklog.api.models.trend.GetFlowDetailResponse;
+import com.zcunsoft.clklog.api.models.trend.GetFlowPreviousMinTotalRequest;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTotalResponse;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailCompareRequest;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailCompareResponse;
@@ -30,6 +31,7 @@ import com.zcunsoft.clklog.api.models.uservisit.GetUserPvbydateResponse;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserLatestTimebydateResponse;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserVisitRequest;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserVisitTimebydateResponse;
+import com.zcunsoft.clklog.api.models.uservisit.GetUserVisitUribydateResponse;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserVisitbydateResponse;
 import com.zcunsoft.clklog.api.models.visitor.*;
 import com.zcunsoft.clklog.api.models.visituri.*;
@@ -122,6 +124,8 @@ public interface IReportService {
     GetFlowTotalResponse getFlowTotal(GetFlowTrendDetailRequest getFlowTrendDetailRequest);
 
     GetFlowDetailResponse getFlowDetail(GetFlowTrendDetailRequest getFlowTrendDetailRequest);
+    
+    GetFlowDetailResponse getFlowDetailByPreviousHour(GetFlowTrendDetailRequest getFlowTrendDetailRequest);
 
     GetVisitUriPathTreeTotalResponse getVisitUriPathTreeTotal(GetVisitUriDetailRequest getVisitUriDetailRequest);
 
@@ -137,5 +141,74 @@ public interface IReportService {
      * @return
      */
     GetOsDetailResponse getOsDetail(GetOsDetailRequest getOsDetailRequest);
+    
+    /**
+     * 获取活跃用户周期日-周-月趋势
+     * @param getVisitorActiveTrend
+     * @return
+     */
+    GetVisitorBaseTrendResponse getVisitorActiveTrend(GetVisitorBaseTrendRequest getVisitorBaseTrendRequest);
+    
+    /**
+     * 获取活跃用户周期日-周-月趋势
+     * @param getVisitorRevisitAndSilentTrend
+     * @return
+     */
+    GetVisitorBaseTrendResponse getVisitorRevisitAndSilentTrend(GetVisitorBaseTrendRequest getVisitorBaseTrendRequest);
+    
+    /**
+     * 获取流失/留存周期日-周-月趋势
+     * @param getVisitorChunrAndRemainTrend
+     * @return
+     */
+    GetVisitorBaseChurnAndRemainTrendResponse getVisitorChunrAndRemainTrend(GetVisitorBaseTrendRequest getVisitorBaseTrendRequest);
+    
+    /**
+     * 获取退出页页面列表
+     * @param getVisitUriDetailPageRequest
+     * @return
+     */
+    GetVisitUriExitDetailPageResponse getVisitUriExitDetail(GetVisitUriDetailPageRequest getVisitUriDetailPageRequest);
+    
+    /**
+     * 获取入口页页面列表
+     * @param getVisitUriDetailPageRequest
+     * @return
+     */
+    GetVisitUriEntryDetailPageResponse getVisitUriEntryDetail(GetVisitUriDetailPageRequest getVisitUriDetailPageRequest);
+    
+    /**
+     * 获取贡献下游浏览量页面列表
+     * @param getVisitUriDetailPageRequest
+     * @return
+     */
+    GetVisitUriDownpvDetailPageResponse getVisitUriDownpvDetail(GetVisitUriDetailPageRequest getVisitUriDetailPageRequest);
 
+    /**
+     * 获取近n分钟流量统计
+     * @param getFlowPreviousMinTotalRequest
+     * @return
+     */
+    GetFlowTotalResponse getFlowPreviousMinTotal(GetFlowPreviousMinTotalRequest getFlowPreviousMinTotalRequest);
+    
+    /**
+     * 获取访问深度
+     * @param getUserVisitRequest
+     * @return
+     */
+    GetUserVisitUribydateResponse getUserVisitUri(GetUserVisitRequest getUserVisitRequest);
+    
+    /**
+     * 获取单个受访页面访问统计数据
+     * @param getVisitUriTrendRequest
+     * @return
+     */
+    GetVisitUriTotalResponse getVisitUriDetailTotal(GetVisitUriDetailTotalRequest getVisitUriTrendRequest);
+    
+  	/**
+  	 * 获取单个受访页面访问趋势数据
+  	 * @param getVisitUriDetailPageRequest
+  	 * @return
+  	 */
+    GetVisitUriDetailTrendResponse getVisitUriDetailTrend(GetVisitUriDetailTrendRequest getVisitUriTrendDetailRequest);
 }

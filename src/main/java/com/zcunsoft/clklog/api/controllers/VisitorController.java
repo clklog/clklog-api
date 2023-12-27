@@ -70,6 +70,24 @@ public class VisitorController {
         return reportService.getVisitorDetailinfo(getVisitorDetailinfoRequest);
     }
     
+	@Operation(summary = "获取活跃用户周期趋势数据")
+	@RequestMapping(path = "/getVisitorActiveTrend", method = RequestMethod.POST)
+	public GetVisitorBaseTrendResponse getVisitorActiveTrend(@RequestBody GetVisitorBaseTrendRequest getVisitorBaseTrendRequest, HttpServletRequest request) {
+	    return reportService.getVisitorActiveTrend(getVisitorBaseTrendRequest);
+	}
+	
+	@Operation(summary = "获取回流/沉默用户周期趋势数据")
+	@RequestMapping(path = "/getVisitorRevisitAndSilentTrend", method = RequestMethod.POST)
+	public GetVisitorBaseTrendResponse getVisitorRevisitAndSilentTrend(@RequestBody GetVisitorBaseTrendRequest getVisitorBaseTrendRequest, HttpServletRequest request) {
+		return reportService.getVisitorRevisitAndSilentTrend(getVisitorBaseTrendRequest);
+	}
+	
+	@Operation(summary = "流失/留存用户周期趋势数据")
+	@RequestMapping(path = "/getVisitorChunrAndRemainTrend", method = RequestMethod.POST)
+	public GetVisitorBaseChurnAndRemainTrendResponse getVisitorChunrAndRemainTrend(@RequestBody GetVisitorBaseTrendRequest getVisitorBaseTrendRequest, HttpServletRequest request) {
+		return reportService.getVisitorChunrAndRemainTrend(getVisitorBaseTrendRequest);
+	}
+    
     @Operation(summary = "获取访问日志")
     @RequestMapping(path = "/getLogAnalysisList", method = RequestMethod.POST)
     public GetLogAnalysisListPageResponse getLogAnalysisList(@RequestBody GetLogAnalysisListPageRequest getLogAnalysisListPageRequest, HttpServletRequest request) {

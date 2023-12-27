@@ -345,8 +345,8 @@ public class ExportReportServiceImpl implements IExportReportService {
     @Override
     public GetSourceWebsiteDetailPageResponse getSourceWebSiteDetail(DownloadRequest downloadRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
-        String selectSql = "sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count from sourcesite_detail_bydate t";
-        String getListSql = "select sourcesite," + selectSql;
+        String selectSql = "sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count from sourcesite_detail_bydate_test t";
+        String getListSql = "select sourcesite as sourcesite,latest_referrer as latest_referrer," + selectSql;
         String getSummarySql = "select " + selectSql;
         String where = "";
 
@@ -360,10 +360,10 @@ public class ExportReportServiceImpl implements IExportReportService {
 
         if (StringUtils.isNotBlank(where)) {
             where = where.substring(4);
-            getListSql += " where t.sourcesite<>'all' and " + where;
-            getSummarySql += " where t.sourcesite='all' and " + where;
+            getListSql += " where t.sourcesite<>'all' and t.latest_referrer<>'all' and " + where;
+            getSummarySql += " where t.sourcesite='all' and t.latest_referrer='all' and " + where;
         }
-        getListSql += " group by t.sourcesite"; 
+        getListSql += " group by t.sourcesite,t.latest_referrer"; 
         getListSql += " order by pv desc "; 
         
         List<SourcesiteDetailbydate> sourcesiteDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<SourcesiteDetailbydate>(SourcesiteDetailbydate.class));
@@ -384,6 +384,7 @@ public class ExportReportServiceImpl implements IExportReportService {
         for (SourcesiteDetailbydate sourcesiteDetailbydate : sourcesiteDetailbydateList) {
             FlowDetail flowDetail = assemblyFlowDetail(sourcesiteDetailbydate, totalSourcesiteDetailbydate);
             flowDetail.setSourcesite(sourcesiteDetailbydate.getSourcesite());
+            flowDetail.setLatestReferrer(sourcesiteDetailbydate.getLatestReferrer());
             flowDetailList.add(flowDetail);
         }
         responseData.setRows(flowDetailList);

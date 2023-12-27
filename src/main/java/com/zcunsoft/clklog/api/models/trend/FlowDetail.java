@@ -137,4 +137,8 @@ public class FlowDetail {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Schema(description = "操作系统")
     private String os;
+    
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "最近一次站外前向地址")
+    private String latestReferrer;
 }

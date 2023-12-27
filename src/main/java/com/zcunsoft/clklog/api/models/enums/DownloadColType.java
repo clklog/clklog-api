@@ -4,6 +4,7 @@ public enum DownloadColType {
 
 	Index("序号","index",4000 ),
 	Sourcesite("来源网站","sourcesite",4000 ),
+	LatestReferrer("来源地址","latestReferrer",4000 ),
 	VisitorType("访客类型","visitorType",4000),
 	StatTime("日期","statTime",4000),
 	Searchword("搜索词","searchword",4000),

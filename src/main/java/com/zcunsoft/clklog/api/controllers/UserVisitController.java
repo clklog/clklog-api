@@ -4,6 +4,7 @@ import com.zcunsoft.clklog.api.models.uservisit.GetUserPvbydateResponse;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserLatestTimebydateResponse;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserVisitRequest;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserVisitTimebydateResponse;
+import com.zcunsoft.clklog.api.models.uservisit.GetUserVisitUribydateResponse;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserVisitbydateResponse;
 import com.zcunsoft.clklog.api.services.IReportService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,4 +48,12 @@ public class UserVisitController {
     public GetUserLatestTimebydateResponse getUserLatestTime(@RequestBody GetUserVisitRequest getUserVisitRequest, HttpServletRequest request) {
     	return reportService.getUserLatestTime(getUserVisitRequest);
     }
+    
+    
+    @Operation(summary = "获取访问深度访客数")
+    @RequestMapping(path = "/getUserVisitUri", method = RequestMethod.POST)
+    public GetUserVisitUribydateResponse getUserVisitUri(@RequestBody GetUserVisitRequest getUserVisitRequest, HttpServletRequest request) {
+    	return reportService.getUserVisitUri(getUserVisitRequest);
+    }
+    
 }

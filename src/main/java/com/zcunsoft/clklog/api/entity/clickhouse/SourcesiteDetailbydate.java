@@ -11,4 +11,7 @@ public class SourcesiteDetailbydate extends BaseDetailbydate {
 
     @Column
     String sourcesite;
+    
+    @Column
+    String latestReferrer;
 }

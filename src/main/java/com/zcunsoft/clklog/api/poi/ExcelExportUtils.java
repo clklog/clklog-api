@@ -460,6 +460,9 @@ public class ExcelExportUtils  {
     	 if(cols.contains("sourcesite")) {
     		 addCellWithStyle(row, detailColIndex++, bodyStyle).setCellValue(flowDetail.getSourcesite());
     	 }
+    	 if(cols.contains("latestReferrer")) {
+    		 addCellWithStyle(row, detailColIndex++, bodyStyle).setCellValue(flowDetail.getLatestReferrer());
+    	 }
     	 if(cols.contains("distinctId")) {
     		 addCellWithStyle(row, detailColIndex++, bodyStyle).setCellValue(flowDetail.getDistinctId());
     	 }
