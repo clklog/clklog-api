@@ -11,6 +11,7 @@ import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailCompareRequest;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailCompareResponse;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailRequest;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailResponse;
+import com.zcunsoft.clklog.api.models.trend.GetFlowTrendTotalRequest;
 import com.zcunsoft.clklog.api.services.IReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,8 +52,8 @@ public class FlowController {
 	*/
     @Operation(summary = "获取流量合计数据")
     @RequestMapping(path = "/getFlowTotal", method = RequestMethod.POST)
-    public GetFlowTotalResponse getFlowTotal(@RequestBody GetFlowTrendDetailRequest getFlowTrendDetailRequest, HttpServletRequest request) {
-        return reportService.getFlowTotal(getFlowTrendDetailRequest);
+    public GetFlowTotalResponse getFlowTotal(@RequestBody GetFlowTrendTotalRequest getFlowTrendTotalRequest, HttpServletRequest request) {
+        return reportService.getFlowTotal(getFlowTrendTotalRequest);
     }
 
     @Operation(summary = "获取流量统计数据")

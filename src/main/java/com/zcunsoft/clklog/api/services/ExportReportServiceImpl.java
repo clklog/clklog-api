@@ -22,7 +22,16 @@ import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailResponse;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailResponseData;
 import com.zcunsoft.clklog.api.models.uservisit.BaseUserVisit;
 import com.zcunsoft.clklog.api.models.visitor.GetVisitorDetailResponse;
+import com.zcunsoft.clklog.api.poi.DownloadAreaRequest;
+import com.zcunsoft.clklog.api.poi.DownloadBaseRequest;
+import com.zcunsoft.clklog.api.poi.DownloadChannelRequest;
+import com.zcunsoft.clklog.api.poi.DownloadDeviceRequest;
+import com.zcunsoft.clklog.api.poi.DownloadFlowTrendRequest;
 import com.zcunsoft.clklog.api.poi.DownloadRequest;
+import com.zcunsoft.clklog.api.poi.DownloadSearchWordRequest;
+import com.zcunsoft.clklog.api.poi.DownloadSourceWebsiteRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitorListRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitorRequest;
 import com.zcunsoft.clklog.api.utils.TimeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
@@ -85,17 +94,17 @@ public class ExportReportServiceImpl implements IExportReportService {
 
 
     @Override
-    public GetFlowTrendDetailResponse getFlowTrendDetail(DownloadRequest downloadRequest) {
+    public GetFlowTrendDetailResponse getFlowTrendDetail(DownloadFlowTrendRequest downloadFlowTrendRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String getListSql = "select * from flow_trend_bydate t";
         String where = "";
-        where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(downloadRequest.getVisitorType(), paramMap, where);
-        where = buildCountryFilter(downloadRequest.getCountry(), paramMap, where);
-        where = buildProvinceFilter(downloadRequest.getProvince(), paramMap, where);
+        where = buildChannelFilter(downloadFlowTrendRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadFlowTrendRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadFlowTrendRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadFlowTrendRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadFlowTrendRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(downloadFlowTrendRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadFlowTrendRequest.getProvince(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             getListSql += " where " + where.substring(4);
@@ -139,15 +148,15 @@ public class ExportReportServiceImpl implements IExportReportService {
             float bounceRate = totalBounceCount * 1.0f / totalFlowDetail.getVisitCount();
             totalFlowDetail.setBounceRate(Float.parseFloat(decimalFormat.get().format(bounceRate*100)));
         }
-        Timestamp startTime = transformFilterTime(downloadRequest.getStartTime(), true, downloadRequest.getTimeType());
-        Timestamp endTime = transformFilterTime(downloadRequest.getEndTime(), false, downloadRequest.getTimeType());
-        if ("hour".equalsIgnoreCase(downloadRequest.getTimeType())) {
+        Timestamp startTime = transformFilterTime(downloadFlowTrendRequest.getStartTime(), true, downloadFlowTrendRequest.getTimeType());
+        Timestamp endTime = transformFilterTime(downloadFlowTrendRequest.getEndTime(), false, downloadFlowTrendRequest.getTimeType());
+        if ("hour".equalsIgnoreCase(downloadFlowTrendRequest.getTimeType())) {
             flowDetailList = getFlowTrendByHour(paramMap, totalFlowDetail, where);
-        } else if ("day".equalsIgnoreCase(downloadRequest.getTimeType())) {
+        } else if ("day".equalsIgnoreCase(downloadFlowTrendRequest.getTimeType())) {
             flowDetailList = getFlowTrendByDate(flowTrendbydateList, totalFlowDetail, startTime, endTime);
-        } else if ("week".equalsIgnoreCase(downloadRequest.getTimeType())) {
+        } else if ("week".equalsIgnoreCase(downloadFlowTrendRequest.getTimeType())) {
             flowDetailList = getFlowTrendByWeek(flowTrendbydateList, totalFlowDetail, startTime, endTime);
-        } else if ("month".equalsIgnoreCase(downloadRequest.getTimeType())) {
+        } else if ("month".equalsIgnoreCase(downloadFlowTrendRequest.getTimeType())) {
             flowDetailList = getFlowTrendByMonth(flowTrendbydateList, totalFlowDetail, startTime, endTime);
         }
         GetFlowTrendDetailResponseData responseData = new GetFlowTrendDetailResponseData();
@@ -158,20 +167,20 @@ public class ExportReportServiceImpl implements IExportReportService {
     }
 
     @Override
-    public GetSearchWordDetailResponse getSearchWordDetail(DownloadRequest downloadRequest) {
+    public GetSearchWordDetailResponse getSearchWordDetail(DownloadSearchWordRequest downloadSearchWordRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String selectSql = "* from searchword_detail_bydate t";
         String getListSql = "select " + selectSql;
         String getSummarySql = "select " + selectSql;
         String where = "";
 
-        where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(downloadRequest.getVisitorType(), paramMap, where);
-        where = buildCountryFilter(downloadRequest.getCountry(), paramMap, where);
-        where = buildProvinceFilter(downloadRequest.getProvince(), paramMap, where);
+        where = buildChannelFilter(downloadSearchWordRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadSearchWordRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadSearchWordRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadSearchWordRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadSearchWordRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(downloadSearchWordRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadSearchWordRequest.getProvince(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             where = where.substring(4);
@@ -205,18 +214,18 @@ public class ExportReportServiceImpl implements IExportReportService {
     }
     
     @Override
-    public List<FlowDetail> getAreaDetailList(DownloadRequest downloadRequest) {
+    public List<FlowDetail> getAreaDetailList(DownloadAreaRequest downloadAreaRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String selectSql = "sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count from area_detail_bydate t";
         String getListSql = "select t.province as province,t.country as country," + selectSql;
         String getSummarySql = "select " + selectSql;
         String where = "";
 
-        where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(downloadRequest.getVisitorType(), paramMap, where);
+        where = buildChannelFilter(downloadAreaRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadAreaRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadAreaRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadAreaRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadAreaRequest.getVisitorType(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             where = where.substring(4);
@@ -247,17 +256,17 @@ public class ExportReportServiceImpl implements IExportReportService {
     }
 
     @Override
-    public FlowDetail getAreaDetailTotal(DownloadRequest downloadRequest) {
+    public FlowDetail getAreaDetailTotal(DownloadAreaRequest downloadAreaRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String selectSql = "sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count from area_detail_bydate t";
         String getSummarySql = "select " + selectSql;
         String where = "";
 
-        where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(downloadRequest.getVisitorType(), paramMap, where);
+        where = buildChannelFilter(downloadAreaRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadAreaRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadAreaRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadAreaRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadAreaRequest.getVisitorType(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             where = where.substring(4);
@@ -343,20 +352,20 @@ public class ExportReportServiceImpl implements IExportReportService {
     }
     
     @Override
-    public GetSourceWebsiteDetailPageResponse getSourceWebSiteDetail(DownloadRequest downloadRequest) {
+    public GetSourceWebsiteDetailPageResponse getSourceWebSiteDetail(DownloadSourceWebsiteRequest downloadSourceWebsiteRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String selectSql = "sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count from sourcesite_detail_bydate_test t";
         String getListSql = "select sourcesite as sourcesite,latest_referrer as latest_referrer," + selectSql;
         String getSummarySql = "select " + selectSql;
         String where = "";
 
-        where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(downloadRequest.getVisitorType(), paramMap, where);
-        where = buildCountryFilter(downloadRequest.getCountry(), paramMap, where);
-        where = buildProvinceFilter(downloadRequest.getProvince(), paramMap, where);
+        where = buildChannelFilter(downloadSourceWebsiteRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadSourceWebsiteRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadSourceWebsiteRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadSourceWebsiteRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadSourceWebsiteRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(downloadSourceWebsiteRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadSourceWebsiteRequest.getProvince(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             where = where.substring(4);
@@ -395,16 +404,16 @@ public class ExportReportServiceImpl implements IExportReportService {
     }
     
     @Override
-    public GetVisitorDetailResponse getVisitorDetail(DownloadRequest downloadRequest) {
+    public GetVisitorDetailResponse getVisitorDetail(DownloadVisitorRequest downloadVisitorRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String getListSql = "select t.is_first_day as is_first_day,sum(pv) as pv,sum(uv) as uv,sum(ip_count) as ip_count,sum(visit_time) as visit_time,sum(visit_count) as visit_count,sum(new_uv) as new_uv,sum(bounce_count) as bounce_count from visitor_detail_bydate t";
         String where = "";
-        where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildCountryFilter(downloadRequest.getCountry(), paramMap, where);
-        where = buildProvinceFilter(downloadRequest.getProvince(), paramMap, where);
+        where = buildChannelFilter(downloadVisitorRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadVisitorRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadVisitorRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadVisitorRequest.getProjectName(), paramMap, where);
+        where = buildCountryFilter(downloadVisitorRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadVisitorRequest.getProvince(), paramMap, where);
         if (StringUtils.isNotBlank(where)) {
             getListSql += " where " + where.substring(4);
         }
@@ -467,22 +476,64 @@ public class ExportReportServiceImpl implements IExportReportService {
         	flowDetail.setRevisit(visitorLifebydate.getRevisitUv());
         	flowDetail.setSilent(visitorLifebydate.getSilentUv());
         }
+        return getVisitorTotal(null, where, getListVisitorDetailSql, where, null, null, getListVisitorLifeSql);
+    }
+    
+    @Override
+    public FlowDetail getVisitorTotal(List<String> channel,String startTime,String endTime,String projectName,List<String> country,List<String> province,String visitorType) {
+    	MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        String getListVisitorDetailSql = "select sum(uv) as uv,sum(new_uv) as newUv from visitor_detail_bydate t ";
+        String getListVisitorLifeSql = "select sum(revisit_uv) as revisitUv,sum(silent_uv) as silentUv,sum(churn_uv) as churnUv from visitor_life_bydate t ";
+        String where = "";
+        where = buildChannelFilter(channel, paramMap, where);
+        where = buildStatDateStartFilter(startTime, paramMap, where);
+        where = buildStatDateEndFilter(endTime, paramMap, where);
+        where = buildProjectNameFilter(projectName, paramMap, where);
+        where = buildCountryFilter(country, paramMap, where);
+        where = buildProvinceFilter(province, paramMap, where);
+        if (StringUtils.isNotBlank(where)) {
+            getListVisitorLifeSql += " where  " + where.substring(4);
+        }
+        where = buildVisitorTypeFilter(visitorType, paramMap, where);
+        if (StringUtils.isNotBlank(where)) {
+//            getListVisitorDetailSql += " where t.is_first_day='all' and " + where.substring(4);
+            getListVisitorDetailSql += " where " + where.substring(4);
+        }
+
+        VisitorDetailbydate visitorDetailbydate = clickHouseJdbcTemplate.queryForObject(getListVisitorDetailSql, paramMap,
+                new BeanPropertyRowMapper<VisitorDetailbydate>(VisitorDetailbydate.class));
+        VisitorLifebydate visitorLifebydate = clickHouseJdbcTemplate.queryForObject(getListVisitorLifeSql, paramMap,
+                new BeanPropertyRowMapper<VisitorLifebydate>(VisitorLifebydate.class));
+        FlowDetail flowDetail = new FlowDetail();;
+        if (visitorDetailbydate != null) {
+        	flowDetail.setUv(visitorDetailbydate.getUv());
+        	flowDetail.setNewUv(visitorDetailbydate.getNewUv());
+        	if (visitorDetailbydate.getUv() > 0) {
+                float newUvRate = visitorDetailbydate.getNewUv() * 1.0f / visitorDetailbydate.getUv();
+                flowDetail.setNewUvRate(Float.parseFloat(decimalFormat.get().format(newUvRate*100)));
+            }
+        }
+        if (!"新访客".equalsIgnoreCase(visitorType)) {
+        	flowDetail.setChurn(visitorLifebydate.getChurnUv());
+        	flowDetail.setRevisit(visitorLifebydate.getRevisitUv());
+        	flowDetail.setSilent(visitorLifebydate.getSilentUv());
+        }
         return flowDetail;
     }
     
     @Override
-    public GetDeviceDetailResponse getDeviceDetail(DownloadRequest downloadRequest) {
+    public GetDeviceDetailResponse getDeviceDetail(DownloadDeviceRequest downloadDeviceRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String getListSql = "select device,sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count from device_detail_bydate t";
         String where = "";
 
-        where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(downloadRequest.getVisitorType(), paramMap, where);
-        where = buildCountryFilter(downloadRequest.getCountry(), paramMap, where);
-        where = buildProvinceFilter(downloadRequest.getProvince(), paramMap, where);
+        where = buildChannelFilter(downloadDeviceRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadDeviceRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadDeviceRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadDeviceRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadDeviceRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(downloadDeviceRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadDeviceRequest.getProvince(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             getListSql += " where " + where.substring(4);
@@ -511,17 +562,17 @@ public class ExportReportServiceImpl implements IExportReportService {
     }
     
     @Override
-    public GetChannelDetailResponse getChannelDetail(DownloadRequest downloadRequest) {
+    public GetChannelDetailResponse getChannelDetail(DownloadChannelRequest downloadChannelRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String getListSql = "select lib,sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count from channel_detail_bydate t";
         String where = "";
 
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(downloadRequest.getVisitorType(), paramMap, where);
-        where = buildCountryFilter(downloadRequest.getCountry(), paramMap, where);
-        where = buildProvinceFilter(downloadRequest.getProvince(), paramMap, where);
+        where = buildStatDateStartFilter(downloadChannelRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadChannelRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadChannelRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadChannelRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(downloadChannelRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadChannelRequest.getProvince(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             getListSql += " where " + where.substring(4);
@@ -549,19 +600,19 @@ public class ExportReportServiceImpl implements IExportReportService {
     }
     
     @Override
-	public List<FlowDetail> getVisitorList(DownloadRequest downloadRequest) {
+	public List<FlowDetail> getVisitorList(DownloadVisitorListRequest downloadVisitorListRequest) {
 		MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String selectSql = "sum(pv) as pv,sum(visit_count) as visit_count,sum(visit_time) as visit_time,max(latest_time) as latest_time from visitor_summary_byvisitor t";
         String getListSql = "select t.distinct_id as distinct_id,t.is_first_day as is_first_day," + selectSql;
         String where = "";
 
-        where = buildChannelByAllFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildCountryByAllFilter(downloadRequest.getCountry(), paramMap, where);
-        where = buildProvinceByAllFilter(downloadRequest.getProvince(), paramMap, where);
-        where = buildVisitorTypeByAllFilter(downloadRequest.getVisitorType(), paramMap, where);
+        where = buildChannelByAllFilter(downloadVisitorListRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadVisitorListRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadVisitorListRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadVisitorListRequest.getProjectName(), paramMap, where);
+        where = buildCountryByAllFilter(downloadVisitorListRequest.getCountry(), paramMap, where);
+        where = buildProvinceByAllFilter(downloadVisitorListRequest.getProvince(), paramMap, where);
+        where = buildVisitorTypeByAllFilter(downloadVisitorListRequest.getVisitorType(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             where = where.substring(4);
@@ -594,18 +645,18 @@ public class ExportReportServiceImpl implements IExportReportService {
 	}
     
     @Override
-    public List<BaseUserVisit> getUserVisit(DownloadRequest downloadRequest) {
+    public List<BaseUserVisit> getUserVisit(DownloadBaseRequest downloadBaseRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String getListSql = "select sum(v1_uv) as v1Uv,sum(v2_uv) as v2Uv,sum(v3_uv) as v3Uv,sum(v4_uv) as v4Uv,sum(v5_uv) as v5Uv,sum(v6_uv) as v6Uv,sum(v7_uv) as v7Uv,sum(v8_uv) as v8Uv,sum(v9_uv) as v9Uv,sum(v10_uv) as v10Uv,sum(v11_15_uv) as v11_15Uv,sum(v16_50_uv) as v16_50Uv,sum(v51_100_uv) as v51_100Uv,sum(v101_200_uv) as v101_200Uv,sum(v201_300_uv) as v201_300Uv,sum(v300_uv) as v300Uv from user_visit_bydate t";
         String where = "";
 
-        where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(downloadRequest.getVisitorType(), paramMap, where);
-        where = buildCountryFilter(downloadRequest.getCountry(), paramMap, where);
-        where = buildProvinceFilter(downloadRequest.getProvince(), paramMap, where);
+        where = buildChannelFilter(downloadBaseRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadBaseRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadBaseRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadBaseRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadBaseRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(downloadBaseRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadBaseRequest.getProvince(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             getListSql += " where " + where.substring(4);
@@ -700,18 +751,18 @@ public class ExportReportServiceImpl implements IExportReportService {
     }
 
     @Override
-    public List<BaseUserVisit> getUserPv(DownloadRequest downloadRequest) {
+    public List<BaseUserVisit> getUserPv(DownloadBaseRequest downloadBaseRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String getListSql = "select sum(pv1_uv) as pv1Uv,sum(pv2_5_uv) as pv2_5Uv,sum(pv6_10_uv) as pv6_10Uv,sum(pv11_20_uv) as pv11_20Uv,sum(pv21_30_uv) as pv21_30Uv,sum(pv31_40_uv) as pv31_40Uv,sum(pv41_50_uv) as pv41_50Uv,sum(pv51_100_uv) as pv51_100Uv,sum(pv101_uv) as pv101Uv from user_pv_bydate t";
         String where = "";
 
-        where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(downloadRequest.getVisitorType(), paramMap, where);
-        where = buildCountryFilter(downloadRequest.getCountry(), paramMap, where);
-        where = buildProvinceFilter(downloadRequest.getProvince(), paramMap, where);
+        where = buildChannelFilter(downloadBaseRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadBaseRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadBaseRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadBaseRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadBaseRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(downloadBaseRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadBaseRequest.getProvince(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             getListSql += " where " + where.substring(4);
@@ -770,18 +821,18 @@ public class ExportReportServiceImpl implements IExportReportService {
     }
 
     @Override
-    public List<BaseUserVisit> getUserVisitTime(DownloadRequest downloadRequest) {
+    public List<BaseUserVisit> getUserVisitTime(DownloadBaseRequest downloadBaseRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String getListSql = "select sum(vt0_10_uv) as vt0_10Uv,sum(vt10_30_uv) as vt10_30Uv,sum(vt30_60_uv) as vt30_60Uv,sum(vt60_120_uv) as vt60_120Uv,sum(vt120_180_uv) as vt120_180Uv,sum(vt180_240_uv) as vt180_240Uv,sum(vt240_300_uv) as vt240_300Uv,sum(vt300_600_uv) as vt300_600Uv,sum(vt600_1800_uv) as vt600_1800Uv,sum(vt1800_3600_uv) as vt1800_3600Uv,sum(vt3600_uv) as vt3600Uv from user_visittime_bydate t";
         String where = "";
 
-        where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(downloadRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(downloadRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(downloadRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(downloadRequest.getVisitorType(), paramMap, where);
-        where = buildCountryFilter(downloadRequest.getCountry(), paramMap, where);
-        where = buildProvinceFilter(downloadRequest.getProvince(), paramMap, where);
+        where = buildChannelFilter(downloadBaseRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadBaseRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadBaseRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadBaseRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadBaseRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(downloadBaseRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadBaseRequest.getProvince(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             getListSql += " where " + where.substring(4);

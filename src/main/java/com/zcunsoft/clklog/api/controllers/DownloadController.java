@@ -8,7 +8,16 @@ import com.zcunsoft.clklog.api.models.trend.FlowDetail;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailResponse;
 import com.zcunsoft.clklog.api.models.uservisit.BaseUserVisit;
 import com.zcunsoft.clklog.api.models.visitor.GetVisitorDetailResponse;
+import com.zcunsoft.clklog.api.poi.DownloadAreaRequest;
+import com.zcunsoft.clklog.api.poi.DownloadBaseRequest;
+import com.zcunsoft.clklog.api.poi.DownloadChannelRequest;
+import com.zcunsoft.clklog.api.poi.DownloadDeviceRequest;
+import com.zcunsoft.clklog.api.poi.DownloadFlowTrendRequest;
 import com.zcunsoft.clklog.api.poi.DownloadRequest;
+import com.zcunsoft.clklog.api.poi.DownloadSearchWordRequest;
+import com.zcunsoft.clklog.api.poi.DownloadSourceWebsiteRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitorListRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitorRequest;
 import com.zcunsoft.clklog.api.poi.ExcelExportUtils;
 import com.zcunsoft.clklog.api.services.IExportReportService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,10 +42,10 @@ public class DownloadController {
     
     @Operation(summary = "下载流量趋势分析")
     @RequestMapping(path = "/exportFlowTrendDetail", method = RequestMethod.POST)
-    public void exportFlowTrendDetail(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
-    	GetFlowTrendDetailResponse getFlowTrendDetailResponse = exportReportService.getFlowTrendDetail(downloadRequest);
+    public void exportFlowTrendDetail(@RequestBody DownloadFlowTrendRequest downloadFlowTrendRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	GetFlowTrendDetailResponse getFlowTrendDetailResponse = exportReportService.getFlowTrendDetail(downloadFlowTrendRequest);
     	try {
-    		ExcelExportUtils.exportFlowTrendDetail(getFlowTrendDetailResponse.getData().getDetail(),getFlowTrendDetailResponse.getData().getTotal(),downloadRequest.getCols(), request,respones);
+    		ExcelExportUtils.exportFlowTrendDetail(getFlowTrendDetailResponse.getData().getDetail(),getFlowTrendDetailResponse.getData().getTotal(),downloadFlowTrendRequest.getCols(), request,respones);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -44,10 +53,10 @@ public class DownloadController {
     
     @Operation(summary = "下载搜索词分析")
     @RequestMapping(path = "/exportSearchWordDetail", method = RequestMethod.POST)
-    public void exportSearchWordDetail(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
-    	GetSearchWordDetailResponse getSearchWordDetailResponse = exportReportService.getSearchWordDetail(downloadRequest);
+    public void exportSearchWordDetail(@RequestBody DownloadSearchWordRequest downloadSearchWordRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	GetSearchWordDetailResponse getSearchWordDetailResponse = exportReportService.getSearchWordDetail(downloadSearchWordRequest);
     	try {
-    		ExcelExportUtils.exportSearchWordDetail(getSearchWordDetailResponse.getData().getRows(),downloadRequest.getCols(), request,respones);
+    		ExcelExportUtils.exportSearchWordDetail(getSearchWordDetailResponse.getData().getRows(),downloadSearchWordRequest.getCols(), request,respones);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -55,11 +64,11 @@ public class DownloadController {
     
     @Operation(summary = "下载地域分析")
     @RequestMapping(path = "/exportAreaDetail", method = RequestMethod.POST)
-    public void exportAreaDetail(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
-    	List<FlowDetail> areaDetailList = exportReportService.getAreaDetailList(downloadRequest);
-    	FlowDetail totalAreaDetail = exportReportService.getAreaDetailTotal(downloadRequest);
+    public void exportAreaDetail(@RequestBody DownloadAreaRequest downloadAreaRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	List<FlowDetail> areaDetailList = exportReportService.getAreaDetailList(downloadAreaRequest);
+    	FlowDetail totalAreaDetail = exportReportService.getAreaDetailTotal(downloadAreaRequest);
     	try {
-    		ExcelExportUtils.exportAreaDetail(areaDetailList,totalAreaDetail,downloadRequest.getCols(), request,respones);
+    		ExcelExportUtils.exportAreaDetail(areaDetailList,totalAreaDetail,downloadAreaRequest.getCols(), request,respones);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -77,12 +86,24 @@ public class DownloadController {
         }
     }
     
+//    @Operation(summary = "下载受访页面-入口页分析")
+//    @RequestMapping(path = "/exportVisitUriEntryDetail", method = RequestMethod.POST)
+//    public void exportVisitUriEntryDetail(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
+//    	List<FlowDetail> dataList = exportReportService.getVisitUriDetailList(downloadRequest);
+//    	FlowDetail totalData = exportReportService.getVisitUriTotal(downloadRequest);
+//    	try {
+//    		ExcelExportUtils.exportVisitUriDetail(dataList,totalData,downloadRequest.getCols(), request,respones);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
+    
     @Operation(summary = "下载来源网站分析")
     @RequestMapping(path = "/exportSourceWebsiteDetail", method = RequestMethod.POST)
-    public void exportSourceWebSiteDetail(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
-    	GetSourceWebsiteDetailPageResponse getSourceWebsiteDetailPageResponse = exportReportService.getSourceWebSiteDetail(downloadRequest);
+    public void exportSourceWebSiteDetail(@RequestBody DownloadSourceWebsiteRequest downloadSourceWebsiteRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	GetSourceWebsiteDetailPageResponse getSourceWebsiteDetailPageResponse = exportReportService.getSourceWebSiteDetail(downloadSourceWebsiteRequest);
     	try {
-    		ExcelExportUtils.exportSourceWebSiteDetail(getSourceWebsiteDetailPageResponse.getData().getRows(),getSourceWebsiteDetailPageResponse.getData().getSummary(),downloadRequest.getCols(), request,respones);
+    		ExcelExportUtils.exportSourceWebSiteDetail(getSourceWebsiteDetailPageResponse.getData().getRows(),getSourceWebsiteDetailPageResponse.getData().getSummary(),downloadSourceWebsiteRequest.getCols(), request,respones);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -90,11 +111,11 @@ public class DownloadController {
     
     @Operation(summary = "下载新老访客分析")
     @RequestMapping(path = "/exportVisitorDetail", method = RequestMethod.POST)
-    public void exportVisitorDetail(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
-    	GetVisitorDetailResponse getVisitorDetailResponse = exportReportService.getVisitorDetail(downloadRequest);
-    	FlowDetail totalData = exportReportService.getVisitorTotal(downloadRequest);
+    public void exportVisitorDetail(@RequestBody DownloadVisitorRequest downloadVisitorRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	GetVisitorDetailResponse getVisitorDetailResponse = exportReportService.getVisitorDetail(downloadVisitorRequest);
+    	FlowDetail totalData = exportReportService.getVisitorTotal(downloadVisitorRequest.getChannel(),downloadVisitorRequest.getStartTime(),downloadVisitorRequest.getEndTime(),downloadVisitorRequest.getProjectName(),downloadVisitorRequest.getCountry(),downloadVisitorRequest.getProvince(),downloadVisitorRequest.getVisitorType());
     	try {
-    		ExcelExportUtils.exportVisitorDetail(getVisitorDetailResponse.getData(),totalData,downloadRequest.getCols(), request,respones);
+    		ExcelExportUtils.exportVisitorDetail(getVisitorDetailResponse.getData(),totalData,downloadVisitorRequest.getCols(), request,respones);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -102,10 +123,10 @@ public class DownloadController {
     
     @Operation(summary = "下载设备分析")
     @RequestMapping(path = "/exportDeviceDetail", method = RequestMethod.POST)
-    public void exportDeviceDetail(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
-    	GetDeviceDetailResponse getDeviceDetailResponse = exportReportService.getDeviceDetail(downloadRequest);
+    public void exportDeviceDetail(@RequestBody DownloadDeviceRequest downloadDeviceRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	GetDeviceDetailResponse getDeviceDetailResponse = exportReportService.getDeviceDetail(downloadDeviceRequest);
     	try {
-    		ExcelExportUtils.exportDeviceDetail(getDeviceDetailResponse.getData(),downloadRequest.getCols(), request,respones);
+    		ExcelExportUtils.exportDeviceDetail(getDeviceDetailResponse.getData(),downloadDeviceRequest.getCols(), request,respones);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -113,10 +134,10 @@ public class DownloadController {
     
     @Operation(summary = "下载渠道分析")
     @RequestMapping(path = "/exportChannelDetail", method = RequestMethod.POST)
-    public void exportChannelDetail(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
-    	GetChannelDetailResponse getChannelDetailResponse = exportReportService.getChannelDetail(downloadRequest);
+    public void exportChannelDetail(@RequestBody DownloadChannelRequest downloadChannelRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	GetChannelDetailResponse getChannelDetailResponse = exportReportService.getChannelDetail(downloadChannelRequest);
     	try {
-    		ExcelExportUtils.exportChannelDetail(getChannelDetailResponse.getData(),downloadRequest.getCols(), request,respones);
+    		ExcelExportUtils.exportChannelDetail(getChannelDetailResponse.getData(),downloadChannelRequest.getCols(), request,respones);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -124,11 +145,11 @@ public class DownloadController {
     
     @Operation(summary = "下载用户行为分析")
     @RequestMapping(path = "/exportVisitorList", method = RequestMethod.POST)
-    public void exportVisitorList(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
-    	List<FlowDetail> detailList =  exportReportService.getVisitorList(downloadRequest);
-    	FlowDetail total = exportReportService.getVisitorTotal(downloadRequest);
+    public void exportVisitorList(@RequestBody DownloadVisitorListRequest downloadVisitorListRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	List<FlowDetail> detailList =  exportReportService.getVisitorList(downloadVisitorListRequest);
+    	FlowDetail total = exportReportService.getVisitorTotal(downloadVisitorListRequest.getChannel(),downloadVisitorListRequest.getStartTime(),downloadVisitorListRequest.getEndTime(),downloadVisitorListRequest.getProjectName(),downloadVisitorListRequest.getCountry(),downloadVisitorListRequest.getProvince(),downloadVisitorListRequest.getVisitorType());
     	try {
-    		ExcelExportUtils.exportVisitorList(detailList,total, downloadRequest.getCols(),request,respones);
+    		ExcelExportUtils.exportVisitorList(detailList,total, downloadVisitorListRequest.getCols(),request,respones);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -137,10 +158,10 @@ public class DownloadController {
     
     @Operation(summary = "下载用户忠诚度分析")
     @RequestMapping(path = "/exportVisitor", method = RequestMethod.POST)
-    public void exportVisitor(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
-    	List<BaseUserVisit> pvList =  exportReportService.getUserPv(downloadRequest);
-    	List<BaseUserVisit> visitList =  exportReportService.getUserVisit(downloadRequest);
-    	List<BaseUserVisit> visitTimeList =  exportReportService.getUserVisitTime(downloadRequest);
+    public void exportVisitor(@RequestBody DownloadBaseRequest downloadBaseRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	List<BaseUserVisit> pvList =  exportReportService.getUserPv(downloadBaseRequest);
+    	List<BaseUserVisit> visitList =  exportReportService.getUserVisit(downloadBaseRequest);
+    	List<BaseUserVisit> visitTimeList =  exportReportService.getUserVisitTime(downloadBaseRequest);
     	try {
     		ExcelExportUtils.exportVisitorList(pvList,visitList,visitTimeList,request,respones);
         } catch (Exception e) {

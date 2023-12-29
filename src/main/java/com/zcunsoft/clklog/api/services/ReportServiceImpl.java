@@ -1382,17 +1382,17 @@ public class ReportServiceImpl implements IReportService {
     }
 
     @Override
-    public GetFlowTotalResponse getFlowTotal(GetFlowTrendDetailRequest getFlowTrendDetailRequest) {
+    public GetFlowTotalResponse getFlowTotal(GetFlowTrendTotalRequest getFlowTrendTotalRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String getListSql = "select * from flow_trend_bydate t";
         String where = "";
-        where = buildChannelFilter(getFlowTrendDetailRequest.getChannel(), paramMap, where);
-        where = buildStatDateStartFilter(getFlowTrendDetailRequest.getStartTime(), paramMap, where);
-        where = buildStatDateEndFilter(getFlowTrendDetailRequest.getEndTime(), paramMap, where);
-        where = buildProjectNameFilter(getFlowTrendDetailRequest.getProjectName(), paramMap, where);
-        where = buildVisitorTypeFilter(getFlowTrendDetailRequest.getVisitorType(), paramMap, where);
-        where = buildCountryFilter(getFlowTrendDetailRequest.getCountry(), paramMap, where);
-        where = buildProvinceFilter(getFlowTrendDetailRequest.getProvince(), paramMap, where);
+        where = buildChannelFilter(getFlowTrendTotalRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(getFlowTrendTotalRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(getFlowTrendTotalRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(getFlowTrendTotalRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(getFlowTrendTotalRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(getFlowTrendTotalRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(getFlowTrendTotalRequest.getProvince(), paramMap, where);
 
         if (StringUtils.isNotBlank(where)) {
             getListSql += " where " + where.substring(4);

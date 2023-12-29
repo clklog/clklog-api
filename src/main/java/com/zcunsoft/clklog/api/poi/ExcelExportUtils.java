@@ -67,6 +67,7 @@ public class ExcelExportUtils  {
 			{
 				add("index");
 				add("sourcesite");
+				add("latestReferrer");
 				add("distinctId");
 				add("visitorType");
 				add("searchword");

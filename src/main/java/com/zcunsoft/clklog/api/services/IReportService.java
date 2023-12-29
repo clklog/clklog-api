@@ -27,6 +27,7 @@ import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailCompareRequest;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailCompareResponse;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailRequest;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailResponse;
+import com.zcunsoft.clklog.api.models.trend.GetFlowTrendTotalRequest;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserPvbydateResponse;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserLatestTimebydateResponse;
 import com.zcunsoft.clklog.api.models.uservisit.GetUserVisitRequest;
@@ -121,7 +122,7 @@ public interface IReportService {
 
     GetDeviceDetailPageResponse getDeviceDetailPageList(GetDeviceDetailPageRequest getDeviceDetailPageRequest);
 
-    GetFlowTotalResponse getFlowTotal(GetFlowTrendDetailRequest getFlowTrendDetailRequest);
+    GetFlowTotalResponse getFlowTotal(GetFlowTrendTotalRequest getFlowTrendTotalRequest);
 
     GetFlowDetailResponse getFlowDetail(GetFlowTrendDetailRequest getFlowTrendDetailRequest);
     
