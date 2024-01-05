@@ -162,7 +162,12 @@ public interface IReportService {
      * @param getVisitorChunrAndRemainTrend
      * @return
      */
-    GetVisitorBaseChurnAndRemainTrendResponse getVisitorChunrAndRemainTrend(GetVisitorBaseTrendRequest getVisitorBaseTrendRequest);
+//    GetVisitorBaseRemainTrendResponse getVisitorChunrAndRemainTrend(GetVisitorBaseTrendRequest getVisitorBaseTrendRequest);
+    
+    
+    GetVisitorBaseRemainTrendResponse getVisitorRemainTrend(GetVisitorBaseTrendRequest getVisitorBaseTrendRequest);
+    
+    GetVisitorBaseChurnTrendResponse getVisitorChurnTrend(GetVisitorBaseTrendRequest getVisitorBaseTrendRequest);
     
     /**
      * 获取退出页页面列表

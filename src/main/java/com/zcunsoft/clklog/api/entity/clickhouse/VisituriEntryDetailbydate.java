@@ -5,9 +5,9 @@ import lombok.Data;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 
-@Entity(name = "visituri_detail_exit_bydate")
+@Entity(name = "visituri_detail_entry_bydate")
 @Data
-public class VisituriDetailExitbydate extends BaseDetailbydate {
+public class VisituriEntryDetailbydate extends BaseDetailbydate {
 
    
 
@@ -15,7 +15,7 @@ public class VisituriDetailExitbydate extends BaseDetailbydate {
     String uri;
     
     @Column
-    Integer exitCount;
+    Integer entryCount;
     
     @Column 
     String title;

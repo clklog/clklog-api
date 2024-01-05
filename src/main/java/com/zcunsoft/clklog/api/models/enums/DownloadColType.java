@@ -31,14 +31,21 @@ public enum DownloadColType {
     AvgPv("平均访问页数","avgPv",4000),
     AvgPvRate("平均访问页数占比(%)","avgPvRate",4000),
     DownPvCount("贡献下游浏览量","downPvCount",4000),
+    DownPvRate("贡献下游率(%)","downPvRate",4000),
     EntryCount("入口页次数","entryCount",4000),
+    EntryRate("入口率(%)","entryRate",4000),
     ExitCount("退出页次数","exitCount",4000),
     ExitRate("退出率(%)","exitRate",4000),
     LatestTime("最后访问时间","latestTime",5000),
     Revisit("回流用户","revisit",4000),
     Silent("沉默用户","silent",4000),
     Churn("流失用户","churn",4000),
-    VisitTime("停留时长(hh:mm:ss)","visitTime",4000);
+    VisitTime("停留时长(hh:mm:ss)","visitTime",4000),
+    Rate("所占比例(%)","rate",4000),
+    PvCount("访问页数","pvCount",4000),
+    VisitTimeDesc("访问时长","visitTimeDesc",4000),
+    VisitUri("访问深度","visitUri",4000),
+    Os("操作系统","os",4000);
     /**
      * 枚举值.
      */

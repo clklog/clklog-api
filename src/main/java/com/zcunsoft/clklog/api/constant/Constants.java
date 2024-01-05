@@ -7,5 +7,7 @@ public class Constants {
 	
 	public static final String DEFAULT_DEVICE = "未知";
 	
+	public static final String DEFAULT_OS = "未知";
+	
 	public static final String DEFAULT_PROVICE = "未知地区";
 }

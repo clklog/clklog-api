@@ -12,15 +12,21 @@ import org.apache.commons.lang3.time.DateUtils;
 
 import com.zcunsoft.clklog.api.entity.clickhouse.VisitorBaseSummarybydate;
 import com.zcunsoft.clklog.api.entity.clickhouse.VisitorBasebydate;
-import com.zcunsoft.clklog.api.entity.clickhouse.VisituriDetailDownpvbydate;
-import com.zcunsoft.clklog.api.entity.clickhouse.VisituriDetailEntrybydate;
-import com.zcunsoft.clklog.api.entity.clickhouse.VisituriDetailExitbydate;
+import com.zcunsoft.clklog.api.entity.clickhouse.VisitorChunrAndRemainModel;
+import com.zcunsoft.clklog.api.entity.clickhouse.VisituriDownpvDetailbydate;
+import com.zcunsoft.clklog.api.entity.clickhouse.VisituriEntryDetailbydate;
+import com.zcunsoft.clklog.api.entity.clickhouse.VisituriExitDetailbydate;
 import com.zcunsoft.clklog.api.entity.clickhouse.VisituriDetailbydate;
-import com.zcunsoft.clklog.api.models.visitor.GetVisitorBaseChurnAndRemainData;
+import com.zcunsoft.clklog.api.models.visitor.GetVisitorBaseChurn;
+import com.zcunsoft.clklog.api.models.visitor.GetVisitorBaseChurnData;
+import com.zcunsoft.clklog.api.models.visitor.GetVisitorBaseRemain;
+import com.zcunsoft.clklog.api.models.visitor.GetVisitorBaseRemainData;
 import com.zcunsoft.clklog.api.models.visitor.GetVisitorBaseTrend;
 import com.zcunsoft.clklog.api.models.visituri.VisitUriDetail;
 import com.zcunsoft.clklog.api.models.visituri.VisitUriDetailTrend;
 import com.zcunsoft.clklog.api.utils.TimeUtils;
+
+import io.micrometer.core.instrument.util.StringUtils;
 
 public class TrendUtils {
 	
@@ -38,13 +44,15 @@ public class TrendUtils {
                     return new DecimalFormat("0.####");
                 }
             };
-
-	public static List<GetVisitorBaseChurnAndRemainData> getVisitorChunrAndRemainTrendByDate(List<VisitorBaseSummarybydate> visitorBaseSummaryDateList,List<VisitorBasebydate> visitorActivebydateList, Timestamp startTime, Timestamp endTime) {
-        List<GetVisitorBaseChurnAndRemainData> visitorDetailList = new ArrayList<>();
+            
+            
+    /**
+	public static List<GetVisitorBaseRemainData> getVisitorChunrAndRemainTrendByDate(List<VisitorBaseSummarybydate> visitorBaseSummaryDateList,List<VisitorBasebydate> visitorActivebydateList, Timestamp startTime, Timestamp endTime) {
+        List<GetVisitorBaseRemainData> visitorDetailList = new ArrayList<>();
 
         Timestamp tmpTime = startTime;
         do {
-        	GetVisitorBaseChurnAndRemainData visitorTrendDetail = new GetVisitorBaseChurnAndRemainData();
+        	GetVisitorBaseRemainData visitorTrendDetail = new GetVisitorBaseRemainData();
         	visitorTrendDetail.setStatTime(yMdFORMAT.get().format(tmpTime));
             Timestamp statDate = tmpTime;
             int uvCount = 0;
@@ -58,11 +66,6 @@ public class TrendUtils {
                 	float remainRate =  0;
                 	float churnRate = 0;
                 	
-//                	for(VisitorBaseSummarybydate visitorBaseSummarybydate : visitorBaseSummaryDateList) {
-//                		if(visitorBaseSummarybydate.getStatDate().getTime() == statDate.getTime()) {
-//                			uvCount = visitorBaseSummarybydate.getUv();
-//                		}
-//                	}
                 	if(uvCount > 0) {
                 		churn = uvCount-remain;
                 		remainRate = remain * 1.0f / uvCount;
@@ -79,35 +82,6 @@ public class TrendUtils {
             	}
             	
             }
-            /**
-            Optional<VisitorBasebydate> optionalVisitorActivebydate = visitorActivebydateList.stream().filter(f -> f.getStatDate().equals(statDate)).findAny();
-            if (optionalVisitorActivebydate.isPresent()) {
-            	VisitorBasebydate visitorActivebydate = optionalVisitorActivebydate.get();
-            	int remain = visitorActivebydate.getActiveCount()-visitorActivebydate.getNewCount();
-            	int churn = 0;
-            	float remainRate =  0;
-            	float churnRate = 0;
-            	
-//            	for(VisitorBaseSummarybydate visitorBaseSummarybydate : visitorBaseSummaryDateList) {
-//            		if(visitorBaseSummarybydate.getStatDate().getTime() == statDate.getTime()) {
-//            			uvCount = visitorBaseSummarybydate.getUv();
-//            		}
-//            	}
-            	if(uvCount > 0) {
-            		churn = uvCount-remain;
-            		remainRate = remain * 1.0f / uvCount;
-            		churnRate = churn * 1.0f / uvCount;
-            	}
-            	visitorTrendDetail.setRemainRate(Float.parseFloat(decimalFormat.get().format(remainRate)));
-            	visitorTrendDetail.setChurnRate(Float.parseFloat(decimalFormat.get().format(churnRate)));
-            	visitorTrendDetail.setRemainCount(remain);
-            	visitorTrendDetail.setChurnCount(churn);
-            	visitorTrendDetail.setNewCount(visitorActivebydate.getNewCount());
-            	visitorTrendDetail.setActiveCount(visitorActivebydate.getActiveCount());
-//            	distinctCount = distinctCount + visitorLifeSummarybydate.getNewCount();
-            	visitorTrendDetail.setUvCount(uvCount);
-            }
-            */
             visitorDetailList.add(visitorTrendDetail);
             tmpTime = new Timestamp(tmpTime.getTime() + DateUtils.MILLIS_PER_DAY);
         }
@@ -115,8 +89,8 @@ public class TrendUtils {
         return visitorDetailList;
     }
 	
-	public static List<GetVisitorBaseChurnAndRemainData>  getVisitorChunrAndRemainTrendByWeek(List<VisitorBaseSummarybydate> visitorBaseSummaryDateList,List<VisitorBasebydate> visitorActivebyWeekList, Timestamp startTime, Timestamp endTime) {
-    	List<GetVisitorBaseChurnAndRemainData> visitorDetailList = new ArrayList<>();
+	public static List<GetVisitorBaseRemainData>  getVisitorChunrAndRemainTrendByWeek(List<VisitorBaseSummarybydate> visitorBaseSummaryDateList,List<VisitorBasebydate> visitorActivebyWeekList, Timestamp startTime, Timestamp endTime) {
+    	List<GetVisitorBaseRemainData> visitorDetailList = new ArrayList<>();
 
         Timestamp tmpTime = startTime;
         int j = 0;
@@ -129,7 +103,7 @@ public class TrendUtils {
                 weekframe[1] = endTime.getTime();
             }
 
-            GetVisitorBaseChurnAndRemainData weekVisitorTrendDetail = new GetVisitorBaseChurnAndRemainData();
+            GetVisitorBaseRemainData weekVisitorTrendDetail = new GetVisitorBaseRemainData();
             String statTime = yMdFORMAT.get().format(new Timestamp(weekframe[0]));
             if (weekframe[1] != weekframe[0]) {
                 statTime += " ~ " + yMdFORMAT.get().format(new Timestamp(weekframe[1]));
@@ -149,20 +123,11 @@ public class TrendUtils {
             	VisitorBasebydate visitorActivebyWeek = visitorActivebyWeekList.get(i);
                 Timestamp statDate = visitorActivebyWeek.getStatDate();
                 long lStatDate = statDate.getTime();
-//                long oneWeekAgoDate = TimeUtils.getGetOneWeekAgoDateByTimestamp(new Timestamp(weekframe[0]));
-//                if(lStatDate == oneWeekAgoDate) {
-//                	uvCount = visitorActivebyWeek.getActiveCount();
-//                }
                 if (lStatDate == weekframe[0]) {
                 	int remain = visitorActivebyWeek.getActiveCount()-visitorActivebyWeek.getNewCount();
                 	int churn = 0;
                 	float remainRate =  0;
                 	float churnRate = 0;
-//                	for(VisitorBaseSummarybydate visitorBaseSummarybydate : visitorBaseSummaryDateList) {
-//                		if(visitorBaseSummarybydate.getStatDate().getTime() == weekframe[1]) {
-//                			uvCount = visitorBaseSummarybydate.getUv();
-//                		}
-//                	}
                 	if(uvCount > 0) {
                 		churn = uvCount-remain;
                 		remainRate = remain * 1.0f / uvCount;
@@ -195,8 +160,8 @@ public class TrendUtils {
         return visitorDetailList;
     }
 	
-	public static List<GetVisitorBaseChurnAndRemainData> getVisitorChunrAndRemainTrendByMonth(List<VisitorBaseSummarybydate> visitorBaseSummaryDateList,List<VisitorBasebydate> visitorActivebyMonthList, Timestamp startTime, Timestamp endTime) {
-        List<GetVisitorBaseChurnAndRemainData> visitorDetailList = new ArrayList<>();
+	public static List<GetVisitorBaseRemainData> getVisitorChunrAndRemainTrendByMonth(List<VisitorBaseSummarybydate> visitorBaseSummaryDateList,List<VisitorBasebydate> visitorActivebyMonthList, Timestamp startTime, Timestamp endTime) {
+        List<GetVisitorBaseRemainData> visitorDetailList = new ArrayList<>();
 
         Timestamp tmpTime = startTime;
         int j = 0;
@@ -210,7 +175,7 @@ public class TrendUtils {
                 monthframe[1] = endTime.getTime();
             }
 
-            GetVisitorBaseChurnAndRemainData monthVisitorTrendDetail = new GetVisitorBaseChurnAndRemainData();
+            GetVisitorBaseRemainData monthVisitorTrendDetail = new GetVisitorBaseRemainData();
             String statTime = yMdFORMAT.get().format(new Timestamp(monthframe[0]));
             if (monthframe[1] != monthframe[0]) {
                 statTime += " ~ " + yMdFORMAT.get().format(new Timestamp(monthframe[1]));
@@ -231,20 +196,11 @@ public class TrendUtils {
             	VisitorBasebydate visitorActivebyMonth = visitorActivebyMonthList.get(i);
                 Timestamp statDate = visitorActivebyMonth.getStatDate();
                 long lStatDate = statDate.getTime();
-//                long oneMonthAgoDate = TimeUtils.getCurrentPreviousMonthFirstDay(new Timestamp(monthframe[0]));
-//                if(lStatDate == oneMonthAgoDate) {
-//                	uvCount = visitorActivebyMonth.getActiveCount();
-//                }
                 if (lStatDate == monthframe[0]) {
                 	int remain = visitorActivebyMonth.getActiveCount()-visitorActivebyMonth.getNewCount();
                 	int churn = 0;
                 	float remainRate =  0;
                 	float churnRate = 0;
-//                	for(VisitorBaseSummarybydate visitorBaseSummarybydate : visitorBaseSummaryDateList) {
-//                		if(visitorBaseSummarybydate.getStatDate().getTime() == monthframe[1]) {
-//                			uvCount = visitorBaseSummarybydate.getUv();
-//                		}
-//                	}
                 	if(uvCount > 0) {
                 		churn = uvCount-remain;
                 		remainRate = remain * 1.0f / uvCount;
@@ -278,7 +234,7 @@ public class TrendUtils {
         while (tmpTime.getTime() <= endTime.getTime());
         return visitorDetailList;
     }
-	
+	*/
 	public static List<GetVisitorBaseTrend> getVisitorBaseTrendByDate(List<VisitorBaseSummarybydate> visitorBaseSummaryDateList,List<VisitorBasebydate> visitorActivebyDateList,List<VisitorBasebydate> visitorRevisitByDateList,List<VisitorBasebydate> visitorContinuousActiveByDateList, Timestamp startTime, Timestamp endTime) {
         List<GetVisitorBaseTrend> visitorDetailList = new ArrayList<>();
 
@@ -508,5 +464,210 @@ public class TrendUtils {
         return visitorDetailList;
     }
     
+	public static List<GetVisitorBaseRemain> getVisitorBaseRemainList(VisitorChunrAndRemainModel visitorChunrAndRemainModel,String timeType) {
+		
+		List<GetVisitorBaseRemain> getVisitorRemainList = new ArrayList<GetVisitorBaseRemain>();
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol0(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol1(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol2(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol3(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol4(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol5(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol6(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol7(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol8(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol9(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol10(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol11(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol12(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol13(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol14(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol15(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol16(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol17(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol18(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol19(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol20(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol21(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol22(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol23(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol24(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol25(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol26(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol27(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol28(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol29(),timeType);
+		getVisitorRemainList = getVisitorBaseRemain(getVisitorRemainList,visitorChunrAndRemainModel.getCol30(),timeType);
+//		if (!"day".equalsIgnoreCase(timeType)) {
+//			getVisitorRemainList = getVisitorBaseChurnAndRemain(getVisitorRemainList,visitorChunrAndRemainModel.getLatestCol());
+//        }
+		return getVisitorRemainList;
+	}
 	
+	public static List<GetVisitorBaseRemain> getVisitorBaseRemain(List<GetVisitorBaseRemain> getVisitorRemainList,String col,String timeType) {
+		GetVisitorBaseRemain getVisitorRemain = new GetVisitorBaseRemain();
+		if(StringUtils.isBlank(col)) {
+			return getVisitorRemainList;
+		}
+		System.out.println(col);
+		String[] datas = col.substring(1, col.length()-1).split(",");
+		if(datas.length <2) {
+			return getVisitorRemainList;
+		}
+		Timestamp time = null;
+		String statTime = datas[0];
+		if("day".equals(timeType)) {
+			time = new Timestamp(Timestamp.valueOf((datas[0]+" 00:00:00")).getTime());
+		} else if("week".equals(timeType)) {
+			long[] weekframe = TimeUtils.getCurrentWeekTimeFrame(Timestamp.valueOf(statTime + " 00:00:00"));
+			if (weekframe[1] != weekframe[0]) {
+                statTime += " ~ " + yMdFORMAT.get().format(new Timestamp(weekframe[1]));
+            }
+			time = new Timestamp(weekframe[1] + DateUtils.MILLIS_PER_DAY);
+		} else if("month".equals(timeType)) {
+			long[] monthframe = TimeUtils.getCurrentMonthTimeFrame(Timestamp.valueOf(statTime + " 00:00:00"));
+			if (monthframe[1] != monthframe[0]) {
+                statTime += " ~ " + yMdFORMAT.get().format(new Timestamp(monthframe[1]));
+            }
+			time = new Timestamp(monthframe[1] + + DateUtils.MILLIS_PER_DAY);
+		}
+		int uvCount = Integer.valueOf(datas[1].trim());
+		getVisitorRemain.setRawStatTime(statTime);
+		getVisitorRemain.setRawUvCount(uvCount);
+		List<GetVisitorBaseRemainData> rows = new ArrayList<>();
+		for(int i=2;i<datas.length;i++) {
+			if(StringUtils.isEmpty(datas[i]) || datas[i].trim().length() == 0) {
+				continue;
+			}
+			int remain = Integer.valueOf(datas[i].trim());
+        	float remainRate =  0;
+        	if(uvCount > 0) {
+        		remainRate = remain * 1.0f / uvCount;
+        	}
+        	GetVisitorBaseRemainData getVisitorBaseRemainData = new GetVisitorBaseRemainData();
+        	getVisitorBaseRemainData.setRemainRate(Float.parseFloat(decimalFormat.get().format(remainRate)));
+        	getVisitorBaseRemainData.setRemainCount(remain);
+        	if("day".equals(timeType)) {
+        		time = new Timestamp(time.getTime() + DateUtils.MILLIS_PER_DAY);
+        		getVisitorBaseRemainData.setStatTime(yMdFORMAT.get().format(time));
+        	} else if("week".equals(timeType)) {
+        		long[] weekframe = TimeUtils.getCurrentWeekTimeFrame(time);
+        		getVisitorBaseRemainData.setStatTime(yMdFORMAT.get().format(new Timestamp(weekframe[0])) + "~" + yMdFORMAT.get().format(new Timestamp(weekframe[1])));
+        		time = new Timestamp(weekframe[1] + DateUtils.MILLIS_PER_DAY);
+        	} else if("month".equals(timeType)) {
+        		long[] monthframe = TimeUtils.getCurrentMonthTimeFrame(time);
+        		getVisitorBaseRemainData.setStatTime(yMdFORMAT.get().format(new Timestamp(monthframe[0])) + "~" + yMdFORMAT.get().format(new Timestamp(monthframe[1])));
+        		time = new Timestamp(monthframe[1] + DateUtils.MILLIS_PER_DAY);
+        	}
+        	rows.add(getVisitorBaseRemainData);
+		}
+		getVisitorRemain.setRows(rows);
+//		getVisitorChurnAndRemain.setStatTime(statTime);
+		getVisitorRemainList.add(getVisitorRemain);
+		return getVisitorRemainList;
+	}
+	
+	
+	public static List<GetVisitorBaseChurn> getVisitorBaseChurnList(VisitorChunrAndRemainModel visitorChunrAndRemainModel,String timeType) {
+		
+		List<GetVisitorBaseChurn> getVisitorChurnList = new ArrayList<GetVisitorBaseChurn>();
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol0(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol1(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol2(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol3(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol4(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol5(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol6(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol7(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol8(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol9(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol10(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol11(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol12(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol13(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol14(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol15(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol16(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol17(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol18(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol19(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol20(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol21(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol22(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol23(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol24(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol25(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol26(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol27(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol28(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol29(),timeType);
+		getVisitorChurnList = getVisitorBaseChrun(getVisitorChurnList,visitorChunrAndRemainModel.getCol30(),timeType);
+	//	if (!"day".equalsIgnoreCase(timeType)) {
+	//		getVisitorChurnList = getVisitorBaseChurnAndRemain(getVisitorChurnList,visitorChunrAndRemainModel.getLatestCol());
+	//    }
+		return getVisitorChurnList;
+	}
+	
+	public static List<GetVisitorBaseChurn> getVisitorBaseChrun(List<GetVisitorBaseChurn> getVisitorChurnList,String col,String timeType) {
+		GetVisitorBaseChurn getVisitorChurn = new GetVisitorBaseChurn();
+		if(StringUtils.isBlank(col)) {
+			return getVisitorChurnList;
+		}
+		System.out.println(col);
+		String[] datas = col.substring(1, col.length()-1).split(",");
+		if(datas.length <2) {
+			return getVisitorChurnList;
+		}
+		Timestamp time = null;
+		String statTime = datas[0];
+		if("day".equals(timeType)) {
+			time = new Timestamp(Timestamp.valueOf((datas[0]+" 00:00:00")).getTime());
+		} else if("week".equals(timeType)) {
+			long[] weekframe = TimeUtils.getCurrentWeekTimeFrame(Timestamp.valueOf(statTime + " 00:00:00"));
+			if (weekframe[1] != weekframe[0]) {
+                statTime += " ~ " + yMdFORMAT.get().format(new Timestamp(weekframe[1]));
+            }
+			time = new Timestamp(weekframe[1] + DateUtils.MILLIS_PER_DAY);
+		} else if("month".equals(timeType)) {
+			long[] monthframe = TimeUtils.getCurrentMonthTimeFrame(Timestamp.valueOf(statTime + " 00:00:00"));
+			if (monthframe[1] != monthframe[0]) {
+                statTime += " ~ " + yMdFORMAT.get().format(new Timestamp(monthframe[1]));
+            }
+			time = new Timestamp(monthframe[1] + + DateUtils.MILLIS_PER_DAY);
+		}
+		
+		int uvCount = Integer.valueOf(datas[1].trim());
+		getVisitorChurn.setRawStatTime(statTime);
+		getVisitorChurn.setRawUvCount(uvCount);
+		List<GetVisitorBaseChurnData> rows = new ArrayList<>();
+		for(int i=2;i<datas.length;i++) {
+			if(StringUtils.isEmpty(datas[i]) || datas[i].trim().length() == 0) {
+				continue;
+			}
+			int churn = Integer.valueOf(datas[i].trim());
+        	float churnRate = 0;
+        	if(uvCount > 0) {
+        		churnRate = churn * 1.0f / uvCount;
+        	}
+        	GetVisitorBaseChurnData getVisitorBaseChurnData = new GetVisitorBaseChurnData();
+        	getVisitorBaseChurnData.setChurnRate(Float.parseFloat(decimalFormat.get().format(churnRate)));
+        	getVisitorBaseChurnData.setChurnCount(churn);
+        	if("day".equals(timeType)) {
+        		time = new Timestamp(time.getTime() + DateUtils.MILLIS_PER_DAY);
+        		getVisitorBaseChurnData.setStatTime(yMdFORMAT.get().format(time));
+        	} else if("week".equals(timeType)) {
+        		long[] weekframe = TimeUtils.getCurrentWeekTimeFrame(time);
+        		getVisitorBaseChurnData.setStatTime(yMdFORMAT.get().format(new Timestamp(weekframe[0])) + "~" + yMdFORMAT.get().format(new Timestamp(weekframe[1])));
+        		time = new Timestamp(weekframe[1] + DateUtils.MILLIS_PER_DAY);
+        	} else if("month".equals(timeType)) {
+        		long[] monthframe = TimeUtils.getCurrentMonthTimeFrame(time);
+        		getVisitorBaseChurnData.setStatTime(yMdFORMAT.get().format(new Timestamp(monthframe[0])) + "~" + yMdFORMAT.get().format(new Timestamp(monthframe[1])));
+        		time = new Timestamp(monthframe[1] + DateUtils.MILLIS_PER_DAY);
+        	}
+        	rows.add(getVisitorBaseChurnData);
+		}
+		getVisitorChurn.setRows(rows);
+		getVisitorChurnList.add(getVisitorChurn);
+		return getVisitorChurnList;
+	}
 }

@@ -73,6 +73,7 @@ public class ExcelExportUtils  {
 				add("searchword");
 				add("statTime");
 				add("device");
+				add("os");
 				add("channel");
 				add("province");
 				add("uri");
@@ -99,6 +100,10 @@ public class ExcelExportUtils  {
 				add("avgPv");
 				add("avgPvRate");
 				add("latestTime");
+				add("pvCount");
+				add("visitTimeDesc");
+				add("visitUri");
+				add("rate");
 			}
 		};
    }
@@ -172,6 +177,63 @@ public class ExcelExportUtils  {
 //        cols.add(0,"index");
 //        cols.add(1,"uri");
         createDetailSheet(workbook, detailList, cols, "受访页面分析","受访页面流量指标分析", headStyle, bodyStyle, floatStyle, request, response);
+    }
+    
+    public static void exportVisitUriEntryDetail(List<FlowDetail> detailList,FlowDetail total,List<String> cols,HttpServletRequest request,HttpServletResponse response) throws IOException {
+        SXSSFWorkbook workbook = new SXSSFWorkbook();
+        CellStyle headStyle = getHeadCellStyle(workbook);
+        CellStyle bodyStyle = getBodyCellStyle(workbook);
+        CellStyle floatStyle = getFloatCellStyle(workbook);
+        
+        List<String> totalCols = Arrays.asList("pv","uv","entryCount","avgVisitTime","bounceRate");
+        createTotalSheet(workbook, totalCols, total, "流量概览", headStyle, bodyStyle, floatStyle);
+        
+        
+      //detailSheet
+        if(cols == null || cols.size() ==0) {
+        	cols = new ArrayList<String>();
+        }
+//        cols.add(0,"index");
+//        cols.add(1,"uri");
+        createDetailSheet(workbook, detailList, cols, "受访页面入口页分析","受访页面入口页流量指标分析", headStyle, bodyStyle, floatStyle, request, response);
+    }
+    
+    public static void exportVisitUriExitDetail(List<FlowDetail> detailList,FlowDetail total,List<String> cols,HttpServletRequest request,HttpServletResponse response) throws IOException {
+        SXSSFWorkbook workbook = new SXSSFWorkbook();
+        CellStyle headStyle = getHeadCellStyle(workbook);
+        CellStyle bodyStyle = getBodyCellStyle(workbook);
+        CellStyle floatStyle = getFloatCellStyle(workbook);
+        
+        List<String> totalCols = Arrays.asList("pv","uv","exitCount","avgVisitTime","bounceRate");
+        createTotalSheet(workbook, totalCols, total, "流量概览", headStyle, bodyStyle, floatStyle);
+        
+        
+      //detailSheet
+        if(cols == null || cols.size() ==0) {
+        	cols = new ArrayList<String>();
+        }
+//        cols.add(0,"index");
+//        cols.add(1,"uri");
+        createDetailSheet(workbook, detailList, cols, "受访页面退出页分析","受访页面退出页流量指标分析", headStyle, bodyStyle, floatStyle, request, response);
+    }
+    
+    public static void exportVisitUriDownpvDetail(List<FlowDetail> detailList,FlowDetail total,List<String> cols,HttpServletRequest request,HttpServletResponse response) throws IOException {
+        SXSSFWorkbook workbook = new SXSSFWorkbook();
+        CellStyle headStyle = getHeadCellStyle(workbook);
+        CellStyle bodyStyle = getBodyCellStyle(workbook);
+        CellStyle floatStyle = getFloatCellStyle(workbook);
+        
+        List<String> totalCols = Arrays.asList("pv","uv","downPvCount","avgVisitTime","bounceRate");
+        createTotalSheet(workbook, totalCols, total, "流量概览", headStyle, bodyStyle, floatStyle);
+        
+        
+      //detailSheet
+        if(cols == null || cols.size() ==0) {
+        	cols = new ArrayList<String>();
+        }
+//        cols.add(0,"index");
+//        cols.add(1,"uri");
+        createDetailSheet(workbook, detailList, cols, "受访页面贡献下游页分析","受访页面贡献下游页流量指标分析", headStyle, bodyStyle, floatStyle, request, response);
     }
     
     public static void exportSourceWebSiteDetail(List<FlowDetail> detailList,FlowDetail total,List<String> cols,HttpServletRequest request,HttpServletResponse response) throws IOException {
@@ -262,7 +324,7 @@ public class ExcelExportUtils  {
     }
     
     
-    public static void exportVisitorList(List<BaseUserVisit> pvList, List<BaseUserVisit> visitList, List<BaseUserVisit> visitTimeList, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public static void exportVisitorList(List<BaseUserVisit> pvList, List<BaseUserVisit> visitList, List<BaseUserVisit> visitTimeList,List<BaseUserVisit> visitUriList,List<BaseUserVisit> latestTimeList, HttpServletRequest request, HttpServletResponse response) throws IOException {
     	SXSSFWorkbook workbook = new SXSSFWorkbook();
         CellStyle headStyle = getHeadCellStyle(workbook);
         CellStyle bodyStyle = getBodyCellStyle(workbook);
@@ -309,7 +371,7 @@ public class ExcelExportUtils  {
             addCellWithStyle(pvRow, pvColIndex++, bodyStyle).setCellValue(baseUserVisit.getValue());
         }
         
-      //用户忠诚度-访问时长
+        //用户忠诚度-访问时长
         Sheet visitTimeSheet = workbook.createSheet("访问时长流量指标分析");
     	String[] visitTimeColumns = new String[visitTimeList.size()];
         int[] visitTimeColWidths = new int[visitTimeList.size()];
@@ -330,8 +392,157 @@ public class ExcelExportUtils  {
             addCellWithStyle(visitTimeRow, visitTimeColIndex++, bodyStyle).setCellValue(baseUserVisit.getValue());
         }
         
+        //用户忠诚度-访问深度
+        Sheet visitUriSheet = workbook.createSheet("访问深度流量指标分析");
+    	String[] visitUriColumns = new String[visitUriList.size()];
+        int[] visitUriColWidths = new int[visitUriList.size()];
+        for(int i=0;i<visitUriList.size();i++) {
+        	visitUriColumns[i] = visitUriList.get(i).getKey();
+        	visitUriColWidths[i] =  3000;
+        }
+        int visitUriRowIndex = DETAIL_ROW_INDEX;
+        int visitUriHeadColIndex =DETAIL_COL_INDEX;
+        Row visitUriHead = visitUriSheet.createRow(visitUriRowIndex++);
+        for (int i = 0; i < visitUriColumns.length; ++i) {
+        	visitUriSheet.setColumnWidth(visitUriHeadColIndex, visitUriColWidths[i]);
+            addCellWithStyle(visitUriHead, visitUriHeadColIndex++, headStyle).setCellValue(visitUriColumns[i]);
+        }
+        int visitUriColIndex = DETAIL_COL_INDEX;
+        Row visitUriRow = visitUriSheet.createRow(visitUriRowIndex++);
+        for (BaseUserVisit baseUserVisit : visitUriList) {
+            addCellWithStyle(visitUriRow, visitUriColIndex++, bodyStyle).setCellValue(baseUserVisit.getValue());
+        }
+        
+        //用户忠诚度-上次访问时间
+        Sheet latestTimeSheet = workbook.createSheet("上次访问时间流量指标分析");
+    	String[] latestTimeColumns = new String[latestTimeList.size()];
+        int[] latestTimeColWidths = new int[latestTimeList.size()];
+        for(int i=0;i<latestTimeList.size();i++) {
+        	latestTimeColumns[i] = latestTimeList.get(i).getKey();
+        	latestTimeColWidths[i] =  3000;
+        }
+        int latestTimeRowIndex = DETAIL_ROW_INDEX;
+        int latestTimeHeadColIndex =DETAIL_COL_INDEX;
+        Row latestTimeHead = latestTimeSheet.createRow(latestTimeRowIndex++);
+        for (int i = 0; i < latestTimeColumns.length; ++i) {
+        	latestTimeSheet.setColumnWidth(latestTimeHeadColIndex, latestTimeColWidths[i]);
+            addCellWithStyle(latestTimeHead, latestTimeHeadColIndex++, headStyle).setCellValue(latestTimeColumns[i]);
+        }
+        int latestTimeColIndex = DETAIL_COL_INDEX;
+        Row latestTimeRow = latestTimeSheet.createRow(latestTimeRowIndex++);
+        for (BaseUserVisit baseUserVisit : latestTimeList) {
+            addCellWithStyle(latestTimeRow, latestTimeColIndex++, bodyStyle).setCellValue(baseUserVisit.getValue());
+        }
+    
         
         downLoadExcel("用户忠诚度分析", workbook, request,response);
+    }
+    
+    
+    public static void createHeadRow(List<String> cols,Sheet sheet,CellStyle headStyle) {
+    	cols = resetColsSort(cols);
+    	String[] detailColumns = new String[cols.size()];
+        int[] detailColWidths = new int[cols.size()];
+        for(int i=0;i<cols.size();i++) {
+        	DownloadColType colType = DownloadColType.parse(cols.get(i));
+        	if(colType == null) {
+        		continue;
+        	}
+        	detailColumns[i] = colType.getName();
+        	detailColWidths[i] =  colType.getWidth();
+        }
+
+        int detailHeadColIndex =DETAIL_COL_INDEX;
+        Row head = sheet.createRow(0);
+        for (int i = 0; i < detailColumns.length; ++i) {
+        	sheet.setColumnWidth(detailHeadColIndex, detailColWidths[i]);
+            addCellWithStyle(head, detailHeadColIndex++, headStyle).setCellValue(detailColumns[i]);
+        }
+    }
+    
+    public static void exportVisitorList1(List<BaseUserVisit> pvList, List<BaseUserVisit> visitList, List<BaseUserVisit> visitTimeList,List<BaseUserVisit> visitUriList,List<BaseUserVisit> latestTimeList, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    	SXSSFWorkbook workbook = new SXSSFWorkbook();
+        CellStyle headStyle = getHeadCellStyle(workbook);
+        CellStyle bodyStyle = getBodyCellStyle(workbook);
+        CellStyle floatStyle = getFloatCellStyle(workbook);
+        
+        //用户忠诚度-访问次数
+        List<String> visitCols = Arrays.asList("index","visitCount","uv","rate");
+        Sheet visitSheet = workbook.createSheet("访问次数流量指标分析");
+        createHeadRow(visitCols, visitSheet, headStyle);
+        for (int i=0;i<visitList.size();i++) {
+        	BaseUserVisit baseUserVisit = visitList.get(i);
+            Row row = visitSheet.createRow((i+1));
+            addCellWithStyle(row, 0, bodyStyle).setCellValue((i+1));
+            addCellWithStyle(row, 1, bodyStyle).setCellValue(baseUserVisit.getKey());
+            addCellWithStyle(row, 2, bodyStyle).setCellValue(baseUserVisit.getValue());
+            addCellWithStyle(row, 3, bodyStyle).setCellValue(String.valueOf(baseUserVisit.getRate()));
+        }
+        
+        //用户忠诚度-访问页数
+        List<String> pvCols = Arrays.asList("index","pvCount","uv","rate");
+        Sheet pvSheet = workbook.createSheet("访问页数流量指标分析");
+        createHeadRow(pvCols, pvSheet, headStyle);
+        for (int i=0;i<pvList.size();i++) {
+        	BaseUserVisit baseUserVisit = pvList.get(i);
+            Row row = pvSheet.createRow((i+1));
+            addCellWithStyle(row, 0, bodyStyle).setCellValue((i+1));
+            addCellWithStyle(row, 1, bodyStyle).setCellValue(baseUserVisit.getKey());
+            addCellWithStyle(row, 2, bodyStyle).setCellValue(baseUserVisit.getValue());
+            addCellWithStyle(row, 3, bodyStyle).setCellValue(String.valueOf(baseUserVisit.getRate()));
+        }
+        
+      //用户忠诚度-访问时长
+        List<String> visitTimeCols = Arrays.asList("index","visitTimeDesc","uv","rate");
+        Sheet visitTimeSheet = workbook.createSheet("访问时长流量指标分析");
+        createHeadRow(visitTimeCols, visitTimeSheet, headStyle);
+        for (int i=0;i<visitTimeList.size();i++) {
+        	BaseUserVisit baseUserVisit = visitTimeList.get(i);
+            Row row = visitTimeSheet.createRow((i+1));
+            addCellWithStyle(row, 0, bodyStyle).setCellValue((i+1));
+            addCellWithStyle(row, 1, bodyStyle).setCellValue(baseUserVisit.getKey());
+            addCellWithStyle(row, 2, bodyStyle).setCellValue(baseUserVisit.getValue());
+            addCellWithStyle(row, 3, bodyStyle).setCellValue(String.valueOf(baseUserVisit.getRate()));
+        }
+        
+      //用户忠诚度-访问深度
+        List<String> visitUriCols = Arrays.asList("index","visitUriDesc","uv","rate");
+        Sheet visitUriSheet = workbook.createSheet("访问深度流量指标分析");
+        createHeadRow(visitUriCols, visitUriSheet, headStyle);
+        for (int i=0;i<visitUriList.size();i++) {
+        	BaseUserVisit baseUserVisit = visitUriList.get(i);
+            Row row = visitUriSheet.createRow((i+1));
+            addCellWithStyle(row, 0, bodyStyle).setCellValue((i+1));
+            addCellWithStyle(row, 1, bodyStyle).setCellValue(baseUserVisit.getKey());
+            addCellWithStyle(row, 2, bodyStyle).setCellValue(baseUserVisit.getValue());
+            addCellWithStyle(row, 3, bodyStyle).setCellValue(String.valueOf(baseUserVisit.getRate()));
+        }
+        
+      //用户忠诚度-上次访问时间
+        List<String> latestTimeCols = Arrays.asList("index","latestTime","uv","rate");
+        Sheet latestTimeSheet = workbook.createSheet("上次访问时间流量指标分析");
+        createHeadRow(latestTimeCols, latestTimeSheet, headStyle);
+        for (int i=0;i<latestTimeList.size();i++) {
+        	BaseUserVisit baseUserVisit = latestTimeList.get(i);
+            Row row = latestTimeSheet.createRow((i+1));
+            addCellWithStyle(row, 0, bodyStyle).setCellValue((i+1));
+            addCellWithStyle(row, 1, bodyStyle).setCellValue(baseUserVisit.getKey());
+            addCellWithStyle(row, 2, bodyStyle).setCellValue(baseUserVisit.getValue());
+            addCellWithStyle(row, 3, bodyStyle).setCellValue(String.valueOf(baseUserVisit.getRate()));
+        }
+        
+        downLoadExcel("用户忠诚度分析", workbook, request,response);
+    }
+    
+    public static void exportOsDetail(List<FlowDetail> detailList,List<String> cols,HttpServletRequest request,HttpServletResponse response) throws IOException {
+        SXSSFWorkbook workbook = new SXSSFWorkbook();
+        CellStyle headStyle = getHeadCellStyle(workbook);
+        CellStyle bodyStyle = getBodyCellStyle(workbook);
+        CellStyle floatStyle = getFloatCellStyle(workbook);
+        if(cols == null || cols.size() ==0) {
+        	cols = new ArrayList<String>();
+        }
+        createDetailSheet(workbook, detailList, cols, "操作系统分析","操作系统分流量指标分析", headStyle, bodyStyle, floatStyle, request, response);
     }
     
     private static void createTotalSheet(SXSSFWorkbook workbook,List<String> totalCols,FlowDetail total,String sheetName,CellStyle headStyle,CellStyle bodyStyle, CellStyle floatStyle) {
@@ -385,6 +596,10 @@ public class ExcelExportUtils  {
         
         if(totalCols.contains("exitCount")) {
         	addCellWithStyle(totalRow, totalColIndex++, bodyStyle).setCellValue(total.getExitCount());
+        }
+        
+        if(totalCols.contains("entryCount")) {
+        	addCellWithStyle(totalRow, totalColIndex++, bodyStyle).setCellValue(total.getEntryCount());
         }
         
         if(totalCols.contains("avgPv")) {
@@ -478,6 +693,9 @@ public class ExcelExportUtils  {
     	 }
     	 if(cols.contains("device")) {
     		 addCellWithStyle(row, detailColIndex++, bodyStyle).setCellValue(flowDetail.getDevice());
+    	 }
+    	 if(cols.contains("os")) {
+    		 addCellWithStyle(row, detailColIndex++, bodyStyle).setCellValue(flowDetail.getOs());
     	 }
     	 if(cols.contains("channel")) {
     		 addCellWithStyle(row, detailColIndex++, bodyStyle).setCellValue(flowDetail.getChannel());

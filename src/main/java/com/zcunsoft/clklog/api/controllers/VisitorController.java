@@ -82,10 +82,16 @@ public class VisitorController {
 		return reportService.getVisitorRevisitAndSilentTrend(getVisitorBaseTrendRequest);
 	}
 	
-	@Operation(summary = "获取流失/留存用户周期趋势数据")
-	@RequestMapping(path = "/getVisitorChunrAndRemainTrend", method = RequestMethod.POST)
-	public GetVisitorBaseChurnAndRemainTrendResponse getVisitorChunrAndRemainTrend(@RequestBody GetVisitorBaseTrendRequest getVisitorBaseTrendRequest, HttpServletRequest request) {
-		return reportService.getVisitorChunrAndRemainTrend(getVisitorBaseTrendRequest);
+	@Operation(summary = "获取留存用户周期趋势数据")
+	@RequestMapping(path = "/getVisitorRemainTrend", method = RequestMethod.POST)
+	public GetVisitorBaseRemainTrendResponse getVisitorRemainTrend(@RequestBody GetVisitorBaseTrendRequest getVisitorBaseTrendRequest, HttpServletRequest request) {
+		return reportService.getVisitorRemainTrend(getVisitorBaseTrendRequest);
+	}
+	
+	@Operation(summary = "获取流失用户周期趋势数据")
+	@RequestMapping(path = "/getVisitorChurnTrend", method = RequestMethod.POST)
+	public GetVisitorBaseChurnTrendResponse getVisitorChurnTrend(@RequestBody GetVisitorBaseTrendRequest getVisitorBaseTrendRequest, HttpServletRequest request) {
+		return reportService.getVisitorChurnTrend(getVisitorBaseTrendRequest);
 	}
     
     @Operation(summary = "获取访问日志")

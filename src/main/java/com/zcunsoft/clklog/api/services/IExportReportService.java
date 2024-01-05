@@ -2,6 +2,7 @@ package com.zcunsoft.clklog.api.services;
 
 import com.zcunsoft.clklog.api.models.channel.GetChannelDetailResponse;
 import com.zcunsoft.clklog.api.models.device.GetDeviceDetailResponse;
+import com.zcunsoft.clklog.api.models.os.GetOsDetailResponse;
 import com.zcunsoft.clklog.api.models.searchword.GetSearchWordDetailResponse;
 import com.zcunsoft.clklog.api.models.sourcewebsite.GetSourceWebsiteDetailPageResponse;
 import com.zcunsoft.clklog.api.models.trend.FlowDetail;
@@ -13,9 +14,13 @@ import com.zcunsoft.clklog.api.poi.DownloadBaseRequest;
 import com.zcunsoft.clklog.api.poi.DownloadChannelRequest;
 import com.zcunsoft.clklog.api.poi.DownloadDeviceRequest;
 import com.zcunsoft.clklog.api.poi.DownloadFlowTrendRequest;
+import com.zcunsoft.clklog.api.poi.DownloadOsRequest;
 import com.zcunsoft.clklog.api.poi.DownloadRequest;
 import com.zcunsoft.clklog.api.poi.DownloadSearchWordRequest;
 import com.zcunsoft.clklog.api.poi.DownloadSourceWebsiteRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitUriDownpvRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitUriEntryRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitUriExitRequest;
 import com.zcunsoft.clklog.api.poi.DownloadVisitorListRequest;
 import com.zcunsoft.clklog.api.poi.DownloadVisitorRequest;
 
@@ -57,6 +62,48 @@ public interface IExportReportService {
     
     //获取受访页面列表
     List<FlowDetail> getVisitUriDetailList(DownloadRequest downloadRequest);
+    
+    /**
+     * 获取受访页面入口也统计数据
+     * @param downloadVisitUriEntryRequest
+     * @return
+     */
+    FlowDetail getVisitUriEntryTotal(DownloadVisitUriEntryRequest downloadVisitUriEntryRequest);
+    
+    /**
+     * 获取受访页面退出页分析数据
+     * @param downloadVisitUriExitRequest
+     * @return
+     */
+    List<FlowDetail> getVisitUriExitDetailList(DownloadVisitUriExitRequest downloadVisitUriExitRequest);
+    
+    /**
+     * 获取受访页面退出也统计数据
+     * @param downloadVisitUriExitRequest
+     * @return
+     */
+    FlowDetail getVisitUriExitTotal(DownloadVisitUriExitRequest downloadVisitUriExitRequest);
+    
+    /**
+     * 获取受访页面贡献下游浏览量页分析数据
+     * @param downloadVisitUriDownpvRequest
+     * @return
+     */
+    List<FlowDetail> getVisitUriDownpvDetailList(DownloadVisitUriDownpvRequest downloadVisitUriDownpvRequest);
+    
+    /**
+     * 获取受访页面献下游浏览量页统计数据
+     * @param downloadVisitUriDownpvRequest
+     * @return
+     */
+    FlowDetail getVisitUriDownpvTotal(DownloadVisitUriDownpvRequest downloadVisitUriDownpvRequest);
+    
+    /**
+     * 获取受访页面入口页分析数据
+     * @param downloadVisitUriEntryRequest
+     * @return
+     */
+    List<FlowDetail> getVisitUriEntryDetailList(DownloadVisitUriEntryRequest downloadVisitUriEntryRequest);
     
     /**
      * 获取来源网站分析数据
@@ -133,4 +180,25 @@ public interface IExportReportService {
      * @return
      */
     List<BaseUserVisit> getUserPv(DownloadBaseRequest downloadBaseRequest);
+    
+    /**
+     * 获取访问深度分析数据
+     * @param downloadBaseRequest
+     * @return
+     */
+    List<BaseUserVisit> getUserVisitUri(DownloadBaseRequest downloadBaseRequest);
+    
+    /**
+     * 获取上次访问时间区间内的分析数据
+     * @param downloadBaseRequest
+     * @return
+     */
+    List<BaseUserVisit> getUserLatestTime(DownloadBaseRequest downloadBaseRequest);
+    
+    /**
+     * 获取操作系统分析数据
+     * @param downloadOsRequest
+     * @return
+     */
+    GetOsDetailResponse getOsDetail(DownloadOsRequest downloadOsRequest);
 }

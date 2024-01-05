@@ -19,8 +19,8 @@ public class GetVisitorBaseTrendRequest {
     @Schema(description = "地域", requiredMode = Schema.RequiredMode.REQUIRED, example = "[\"上海\",\"北京\",\"其他\"]")
     private List<String> province;
 
-    @Schema(description = "访客类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "新访客/老访客")
-    private String visitorType;
+//    @Schema(description = "访客类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "新访客/老访客")
+//    private String visitorType;
 
     @Schema(description = "开始时间", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023-06-08")
     private String startTime;

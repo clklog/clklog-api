@@ -8,7 +8,9 @@ import com.zcunsoft.clklog.api.models.TimeFrame;
 import com.zcunsoft.clklog.api.models.channel.GetChannelDetailResponse;
 import com.zcunsoft.clklog.api.models.device.GetDeviceDetailResponse;
 import com.zcunsoft.clklog.api.models.enums.LibType;
+import com.zcunsoft.clklog.api.models.enums.SortType;
 import com.zcunsoft.clklog.api.models.enums.VisitorType;
+import com.zcunsoft.clklog.api.models.os.GetOsDetailResponse;
 import com.zcunsoft.clklog.api.models.searchword.GetSearchWordDetailResponse;
 import com.zcunsoft.clklog.api.models.searchword.GetSearchWordDetailResponseData;
 import com.zcunsoft.clklog.api.models.searchword.SearchWordDetail;
@@ -21,17 +23,27 @@ import com.zcunsoft.clklog.api.models.trend.FlowDetail;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailResponse;
 import com.zcunsoft.clklog.api.models.trend.GetFlowTrendDetailResponseData;
 import com.zcunsoft.clklog.api.models.uservisit.BaseUserVisit;
+import com.zcunsoft.clklog.api.models.uservisit.GetUserLatestTimebydateResponse;
+import com.zcunsoft.clklog.api.models.uservisit.GetUserVisitUribydateResponse;
 import com.zcunsoft.clklog.api.models.visitor.GetVisitorDetailResponse;
+import com.zcunsoft.clklog.api.models.visituri.GetVisitUriEntryDetailPageResponse;
+import com.zcunsoft.clklog.api.models.visituri.GetVisitUriEntryDetailPageResponseData;
+import com.zcunsoft.clklog.api.models.visituri.VisitUriEntryDetail;
 import com.zcunsoft.clklog.api.poi.DownloadAreaRequest;
 import com.zcunsoft.clklog.api.poi.DownloadBaseRequest;
 import com.zcunsoft.clklog.api.poi.DownloadChannelRequest;
 import com.zcunsoft.clklog.api.poi.DownloadDeviceRequest;
 import com.zcunsoft.clklog.api.poi.DownloadFlowTrendRequest;
+import com.zcunsoft.clklog.api.poi.DownloadOsRequest;
 import com.zcunsoft.clklog.api.poi.DownloadRequest;
 import com.zcunsoft.clklog.api.poi.DownloadSearchWordRequest;
 import com.zcunsoft.clklog.api.poi.DownloadSourceWebsiteRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitUriDownpvRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitUriEntryRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitUriExitRequest;
 import com.zcunsoft.clklog.api.poi.DownloadVisitorListRequest;
 import com.zcunsoft.clklog.api.poi.DownloadVisitorRequest;
+import com.zcunsoft.clklog.api.utils.MathUtils;
 import com.zcunsoft.clklog.api.utils.TimeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
@@ -50,6 +62,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class ExportReportServiceImpl implements IExportReportService {
@@ -314,6 +328,7 @@ public class ExportReportServiceImpl implements IExportReportService {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String selectSql = "sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count,sum(down_pv_count) as downPvCount,sum(exit_count) as exitCount,sum(entry_count) as entryCount from visituri_detail_bydate t";
         String getListSql = "select t.uri as uri,t.uri_path as uri_path,t.title as title, " + selectSql;
+        String getSummarySql = "select " + selectSql;
         String where = "";
 
         where = buildChannelFilter(downloadRequest.getChannel(), paramMap, where);
@@ -327,15 +342,20 @@ public class ExportReportServiceImpl implements IExportReportService {
         if (StringUtils.isNotBlank(where)) {
             where = where.substring(4);
             getListSql += " where t.uri <> 'all' and t.uri_path <> 'all' and t.title<> 'all' and t.pv>0 and " + where;
+            getSummarySql += " where t.uri = 'all' and t.uri_path = 'all' and t.title = 'all' and t.pv > 0 and " + where;
         }
         getListSql += " group by t.uri,t.uri_path,t.title "; 
         getListSql += " order by pv desc "; 
         List<VisituriDetailbydate> visitUriDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<VisituriDetailbydate>(VisituriDetailbydate.class));
-
+        List<VisituriDetailbydate> summartVisitUriDetailbydateList = clickHouseJdbcTemplate.query(getSummarySql, paramMap, new BeanPropertyRowMapper<VisituriDetailbydate>(VisituriDetailbydate.class));
+        VisituriDetailbydate totalVisituriDetailbydate = null;
+        if(summartVisitUriDetailbydateList.size() > 0) {
+        	totalVisituriDetailbydate = summartVisitUriDetailbydateList.get(0);
+        }
         List<FlowDetail> visitUriDetailList = new ArrayList<>();
 
         for (VisituriDetailbydate visituriDetailbydate : visitUriDetailbydateList) {
-            FlowDetail flowDetail = assemblyFlowDetail(visituriDetailbydate, visituriDetailbydate);
+            FlowDetail flowDetail = assemblyFlowDetail(visituriDetailbydate, totalVisituriDetailbydate);
             flowDetail.setEntryCount(visituriDetailbydate.getEntryCount());
             flowDetail.setExitCount(visituriDetailbydate.getExitCount());
             if (visituriDetailbydate.getVisitCount() > 0) {
@@ -352,6 +372,271 @@ public class ExportReportServiceImpl implements IExportReportService {
     }
     
     @Override
+    public FlowDetail getVisitUriEntryTotal(DownloadVisitUriEntryRequest downloadVisitUriEntryRequest) {
+        MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        String getVisitUriSql = "select sum(pv) as pv,sum(uv) as uv,sum(new_uv) as newUv,sum(entry_count) as entryCount,sum(visit_count) as visitCount,sum(visit_time) as visitTime,sum(bounce_count) as bounceCount,sum(ip_count) as ipCount from visituri_detail_entry_bydate t ";
+        String where = "";
+        where = buildChannelFilter(downloadVisitUriEntryRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadVisitUriEntryRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadVisitUriEntryRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadVisitUriEntryRequest.getProjectName(), paramMap, where);
+        where = buildCountryFilter(downloadVisitUriEntryRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadVisitUriEntryRequest.getProvince(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadVisitUriEntryRequest.getVisitorType(), paramMap, where);
+        if (StringUtils.isNotBlank(where)) {
+            getVisitUriSql += " where uri = 'all' and uri_path='all' and title='all' and " + where.substring(4);
+        }
+
+        VisituriDetailbydate visituriDetailbydate = clickHouseJdbcTemplate.queryForObject(getVisitUriSql, paramMap,
+                new BeanPropertyRowMapper<VisituriDetailbydate>(VisituriDetailbydate.class));
+        if (visituriDetailbydate != null) {
+            FlowDetail flowDetail = assemblyFlowDetail(visituriDetailbydate, visituriDetailbydate);
+            flowDetail.setEntryCount(visituriDetailbydate.getEntryCount());
+            return flowDetail;
+        }
+        return new FlowDetail();
+    }
+    
+    
+    @Override
+	public List<FlowDetail> getVisitUriEntryDetailList(DownloadVisitUriEntryRequest downloadVisitUriEntryRequest) {
+    	MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        String selectSql = "sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count,sum(entry_count) as entry_count from visituri_detail_entry_bydate t ";
+        String getListSql = "select t.uri as uri,t.uri_path as uri_path,t.title as title," + selectSql;
+        String getSummarySql = "select " + selectSql;
+        String where = "";
+
+        where = buildChannelFilter(downloadVisitUriEntryRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadVisitUriEntryRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadVisitUriEntryRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadVisitUriEntryRequest.getProjectName(), paramMap, where);
+        where = buildCountryFilter(downloadVisitUriEntryRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadVisitUriEntryRequest.getProvince(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadVisitUriEntryRequest.getVisitorType(), paramMap, where);
+
+        if (StringUtils.isNotBlank(downloadVisitUriEntryRequest.getUriPath())) {
+            if (downloadVisitUriEntryRequest.isNeedFuzzySearchUriPath()) {
+                where += " and t.uri_path like :uri_path||'%'";
+            } else {
+                where += " and t.uri_path=:uri_path";
+            }
+
+            String host = extractHost(downloadVisitUriEntryRequest.getUriPath());
+            if (StringUtils.isNotBlank(host)) {
+                paramMap.addValue("host", host);
+                where += " and t.host=:host";
+            }
+            paramMap.addValue("uri_path", downloadVisitUriEntryRequest.getUriPath().substring(host.length()));
+        }
+        if (StringUtils.isNotBlank(where)) {
+            where = where.substring(4);
+            getListSql += " where t.uri <> 'all' and t.uri_path <> 'all' and t.title <> 'all' and t.entry_count > 0 and " + where;
+            getSummarySql += " where t.uri = 'all' and t.uri_path = 'all' and t.title = 'all' and t.entry_count > 0 and " + where;
+        }
+        getListSql += " group by t.uri,t.title,t.uri_path";
+        getListSql += " order by pv desc "; 
+
+        List<VisituriEntryDetailbydate> visitUriEntryDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<VisituriEntryDetailbydate>(VisituriEntryDetailbydate.class));
+        List<VisituriEntryDetailbydate> summartVisitUriEntryDetailbydateList = clickHouseJdbcTemplate.query(getSummarySql, paramMap, new BeanPropertyRowMapper<VisituriEntryDetailbydate>(VisituriEntryDetailbydate.class));
+        VisituriEntryDetailbydate totalVisituriEntryDetailbydate = null;
+        if(summartVisitUriEntryDetailbydateList.size() > 0) {
+        	totalVisituriEntryDetailbydate = summartVisitUriEntryDetailbydateList.get(0);
+        }
+        List<FlowDetail> visitUriDetailList = new ArrayList<>();
+
+        for (VisituriEntryDetailbydate visituriEntryDetailbydate : visitUriEntryDetailbydateList) {
+            FlowDetail flowDetail = assemblyFlowDetail(visituriEntryDetailbydate, totalVisituriEntryDetailbydate);
+            flowDetail.setEntryCount(visituriEntryDetailbydate.getEntryCount());
+            if (visituriEntryDetailbydate.getVisitCount() > 0) {
+                float entryRate = visituriEntryDetailbydate.getEntryCount() * 1.0f / visituriEntryDetailbydate.getVisitCount();
+                flowDetail.setEntryRate(Float.parseFloat(decimalFormat.get().format(entryRate*100)));
+            }
+            flowDetail.setUri(visituriEntryDetailbydate.getUri());
+            flowDetail.setTitle(visituriEntryDetailbydate.getTitle());
+            flowDetail.setUriPath(visituriEntryDetailbydate.getUriPath());
+            visitUriDetailList.add(flowDetail);
+        }
+        return visitUriDetailList;
+	}
+    
+    
+
+	@Override
+	public List<FlowDetail> getVisitUriExitDetailList(DownloadVisitUriExitRequest downloadVisitUriExitRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        String selectSql = "sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count,sum(exit_count) as exit_count from visituri_detail_exit_bydate t ";
+        String getListSql = "select t.uri as uri,t.uri_path as uri_path,t.title as title," + selectSql;
+        String getSummarySql = "select " + selectSql;
+        String where = "";
+
+        where = buildChannelFilter(downloadVisitUriExitRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadVisitUriExitRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadVisitUriExitRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadVisitUriExitRequest.getProjectName(), paramMap, where);
+        where = buildCountryFilter(downloadVisitUriExitRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadVisitUriExitRequest.getProvince(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadVisitUriExitRequest.getVisitorType(), paramMap, where);
+
+        if (StringUtils.isNotBlank(downloadVisitUriExitRequest.getUriPath())) {
+            if (downloadVisitUriExitRequest.isNeedFuzzySearchUriPath()) {
+                where += " and t.uri_path like :uri_path||'%'";
+            } else {
+                where += " and t.uri_path=:uri_path";
+            }
+
+            String host = extractHost(downloadVisitUriExitRequest.getUriPath());
+            if (StringUtils.isNotBlank(host)) {
+                paramMap.addValue("host", host);
+                where += " and t.host=:host";
+            }
+            paramMap.addValue("uri_path", downloadVisitUriExitRequest.getUriPath().substring(host.length()));
+        }
+        if (StringUtils.isNotBlank(where)) {
+            where = where.substring(4);
+            getListSql += " where t.uri <> 'all' and t.uri_path <> 'all' and t.title <> 'all' and t.exit_count > 0 and " + where;
+            getSummarySql += " where t.uri = 'all' and t.uri_path = 'all' and t.title = 'all' and t.exit_count > 0 and " + where;
+            
+        }
+        getListSql += " group by t.uri,t.title,t.uri_path";
+        getListSql += " order by pv desc "; 
+
+        List<VisituriExitDetailbydate> visitUriExitDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<VisituriExitDetailbydate>(VisituriExitDetailbydate.class));
+        List<VisituriExitDetailbydate> summartVisitUriExitDetailbydateList = clickHouseJdbcTemplate.query(getSummarySql, paramMap, new BeanPropertyRowMapper<VisituriExitDetailbydate>(VisituriExitDetailbydate.class));
+        VisituriExitDetailbydate totalVisituriExitDetailbydate = null;
+        if(summartVisitUriExitDetailbydateList.size() > 0) {
+        	totalVisituriExitDetailbydate = summartVisitUriExitDetailbydateList.get(0);
+        }
+        List<FlowDetail> visitUriDetailList = new ArrayList<>();
+
+        for (VisituriExitDetailbydate visituriExitDetailbydate : visitUriExitDetailbydateList) {
+            FlowDetail flowDetail = assemblyFlowDetail(visituriExitDetailbydate, totalVisituriExitDetailbydate);
+            flowDetail.setExitCount(visituriExitDetailbydate.getExitCount());
+            if (visituriExitDetailbydate.getVisitCount() > 0) {
+                float exitRate = visituriExitDetailbydate.getExitCount() * 1.0f / visituriExitDetailbydate.getVisitCount();
+                flowDetail.setExitRate(Float.parseFloat(decimalFormat.get().format(exitRate*100)));
+            }
+            flowDetail.setUri(visituriExitDetailbydate.getUri());
+            flowDetail.setTitle(visituriExitDetailbydate.getTitle());
+            flowDetail.setUriPath(visituriExitDetailbydate.getUriPath());
+            visitUriDetailList.add(flowDetail);
+        }
+        return visitUriDetailList;
+	}
+
+	@Override
+	public FlowDetail getVisitUriExitTotal(DownloadVisitUriExitRequest downloadVisitUriExitRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        String getVisitUriSql = "select sum(pv) as pv,sum(uv) as uv,sum(new_uv) as newUv,sum(exit_count) as exitCount,sum(visit_count) as visitCount,sum(visit_time) as visitTime,sum(bounce_count) as bounceCount,sum(ip_count) as ipCount from visituri_detail_exit_bydate t ";
+        String where = "";
+        where = buildChannelFilter(downloadVisitUriExitRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadVisitUriExitRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadVisitUriExitRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadVisitUriExitRequest.getProjectName(), paramMap, where);
+        where = buildCountryFilter(downloadVisitUriExitRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadVisitUriExitRequest.getProvince(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadVisitUriExitRequest.getVisitorType(), paramMap, where);
+        if (StringUtils.isNotBlank(where)) {
+            getVisitUriSql += " where uri = 'all' and uri_path='all' and title='all' and " + where.substring(4);
+        }
+
+        VisituriDetailbydate visituriDetailbydate = clickHouseJdbcTemplate.queryForObject(getVisitUriSql, paramMap,
+                new BeanPropertyRowMapper<VisituriDetailbydate>(VisituriDetailbydate.class));
+        if (visituriDetailbydate != null) {
+            FlowDetail flowDetail = assemblyFlowDetail(visituriDetailbydate, visituriDetailbydate);
+            flowDetail.setExitCount(visituriDetailbydate.getExitCount());
+            return flowDetail;
+        }
+        return new FlowDetail();
+	}
+
+	@Override
+	public List<FlowDetail> getVisitUriDownpvDetailList(DownloadVisitUriDownpvRequest downloadVisitUriDownpvRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        String selectSql = "sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count,sum(down_pv_count) as down_pv_count from visituri_detail_downpv_bydate t ";
+        String getListSql = "select t.uri as uri,t.uri_path as uri_path,t.title as title," + selectSql;
+        String getSummarySql = "select " + selectSql;
+        String where = "";
+
+        where = buildChannelFilter(downloadVisitUriDownpvRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadVisitUriDownpvRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadVisitUriDownpvRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadVisitUriDownpvRequest.getProjectName(), paramMap, where);
+        where = buildCountryFilter(downloadVisitUriDownpvRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadVisitUriDownpvRequest.getProvince(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadVisitUriDownpvRequest.getVisitorType(), paramMap, where);
+
+        if (StringUtils.isNotBlank(downloadVisitUriDownpvRequest.getUriPath())) {
+            if (downloadVisitUriDownpvRequest.isNeedFuzzySearchUriPath()) {
+                where += " and t.uri_path like :uri_path||'%'";
+            } else {
+                where += " and t.uri_path=:uri_path";
+            }
+
+            String host = extractHost(downloadVisitUriDownpvRequest.getUriPath());
+            if (StringUtils.isNotBlank(host)) {
+                paramMap.addValue("host", host);
+                where += " and t.host=:host";
+            }
+            paramMap.addValue("uri_path", downloadVisitUriDownpvRequest.getUriPath().substring(host.length()));
+        }
+        if (StringUtils.isNotBlank(where)) {
+            where = where.substring(4);
+            getListSql += " where t.uri <> 'all' and t.uri_path <> 'all' and t.title <> 'all' and t.down_pv_count > 0 and " + where;
+            getSummarySql += " where t.uri = 'all' and t.uri_path = 'all' and t.title = 'all' and t.down_pv_count > 0 and " + where;
+        }
+        getListSql += " group by t.uri,t.title,t.uri_path";
+        getListSql += " order by pv desc "; 
+
+        List<VisituriDownpvDetailbydate> visitUriDownpvDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<VisituriDownpvDetailbydate>(VisituriDownpvDetailbydate.class));
+        List<VisituriDownpvDetailbydate> summartVisitUriDownpvDetailbydateList = clickHouseJdbcTemplate.query(getSummarySql, paramMap, new BeanPropertyRowMapper<VisituriDownpvDetailbydate>(VisituriDownpvDetailbydate.class));
+        VisituriDownpvDetailbydate totalVisituriDownpvDetailbydate = null;
+        if(summartVisitUriDownpvDetailbydateList.size() > 0) {
+        	totalVisituriDownpvDetailbydate = summartVisitUriDownpvDetailbydateList.get(0);
+        }
+        List<FlowDetail> visitUriDetailList = new ArrayList<>();
+
+        for (VisituriDownpvDetailbydate visituriDownpvDetailbydate : visitUriDownpvDetailbydateList) {
+            FlowDetail flowDetail = assemblyFlowDetail(visituriDownpvDetailbydate, totalVisituriDownpvDetailbydate);
+            flowDetail.setDownPvCount(visituriDownpvDetailbydate.getDownPvCount());
+            if (visituriDownpvDetailbydate.getVisitCount() > 0) {
+                float downPvRate = visituriDownpvDetailbydate.getDownPvCount() * 1.0f / visituriDownpvDetailbydate.getVisitCount();
+                flowDetail.setEntryRate(Float.parseFloat(decimalFormat.get().format(downPvRate*100)));
+            }
+            flowDetail.setUri(visituriDownpvDetailbydate.getUri());
+            flowDetail.setTitle(visituriDownpvDetailbydate.getTitle());
+            flowDetail.setUriPath(visituriDownpvDetailbydate.getUriPath());
+            visitUriDetailList.add(flowDetail);
+        }
+        return visitUriDetailList;
+	}
+
+	@Override
+	public FlowDetail getVisitUriDownpvTotal(DownloadVisitUriDownpvRequest downloadVisitUriDownpvRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        String getVisitUriSql = "select sum(pv) as pv,sum(uv) as uv,sum(new_uv) as newUv,sum(down_pv_count) as downPvCount,sum(visit_count) as visitCount,sum(visit_time) as visitTime,sum(bounce_count) as bounceCount,sum(ip_count) as ipCount from visituri_detail_downpv_bydate t ";
+        String where = "";
+        where = buildChannelFilter(downloadVisitUriDownpvRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadVisitUriDownpvRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadVisitUriDownpvRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadVisitUriDownpvRequest.getProjectName(), paramMap, where);
+        where = buildCountryFilter(downloadVisitUriDownpvRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadVisitUriDownpvRequest.getProvince(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadVisitUriDownpvRequest.getVisitorType(), paramMap, where);
+        if (StringUtils.isNotBlank(where)) {
+            getVisitUriSql += " where uri = 'all' and uri_path='all' and title='all' and " + where.substring(4);
+        }
+
+        VisituriDetailbydate visituriDetailbydate = clickHouseJdbcTemplate.queryForObject(getVisitUriSql, paramMap,
+                new BeanPropertyRowMapper<VisituriDetailbydate>(VisituriDetailbydate.class));
+        if (visituriDetailbydate != null) {
+            FlowDetail flowDetail = assemblyFlowDetail(visituriDetailbydate, visituriDetailbydate);
+            flowDetail.setDownPvCount(visituriDetailbydate.getDownPvCount());
+            return flowDetail;
+        }
+        return new FlowDetail();
+	}
+
+	@Override
     public GetSourceWebsiteDetailPageResponse getSourceWebSiteDetail(DownloadSourceWebsiteRequest downloadSourceWebsiteRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String selectSql = "sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count from sourcesite_detail_bydate_test t";
@@ -553,6 +838,9 @@ public class ExportReportServiceImpl implements IExportReportService {
 
         GetDeviceDetailResponse response = new GetDeviceDetailResponse();
         for (DeviceDetailbydate deviceDetailbydate : deviceDetailbydateList) {
+        	if (deviceDetailbydate.getDevice().equalsIgnoreCase("all")) {
+        		continue;
+        	}
             FlowDetail flowDetail = assemblyFlowDetail(deviceDetailbydate, totalDeviceDetailbydate);
             flowDetail.setDevice(StringUtils.isEmpty(deviceDetailbydate.getDevice()) ? Constants.DEFAULT_DEVICE : deviceDetailbydate.getDevice());
             flowDetailList.add(flowDetail);
@@ -664,86 +952,109 @@ public class ExportReportServiceImpl implements IExportReportService {
         List<UserVisitbydate> userVisitbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<UserVisitbydate>(UserVisitbydate.class));
         List<BaseUserVisit> baseUserVisitList = new ArrayList<BaseUserVisit>();
         BaseUserVisit baseUserVisit = null;
+        int total = 0;
         if (userVisitbydateList.size() > 0) {
             UserVisitbydate userVisitbydate = userVisitbydateList.get(0);
+            
+            total = userVisitbydate.getV1Uv() + userVisitbydate.getV2Uv() + userVisitbydate.getV3Uv() + userVisitbydate.getV4Uv() + userVisitbydate.getV5Uv() + userVisitbydate.getV6Uv()
+            + userVisitbydate.getV7Uv() + userVisitbydate.getV8Uv() + userVisitbydate.getV9Uv() + userVisitbydate.getV10Uv() + userVisitbydate.getV11_15Uv() + userVisitbydate.getV16_50Uv()
+            + userVisitbydate.getV51_100Uv() + userVisitbydate.getV101_200Uv() + userVisitbydate.getV201_300Uv() + userVisitbydate.getV300Uv();
+            
+            
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("1次");
             baseUserVisit.setValue(userVisitbydate.getV1Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV1Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("2次");
             baseUserVisit.setValue(userVisitbydate.getV2Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV2Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("3次");
             baseUserVisit.setValue(userVisitbydate.getV3Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV3Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("4次");
             baseUserVisit.setValue(userVisitbydate.getV4Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV4Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("5次");
             baseUserVisit.setValue(userVisitbydate.getV5Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV5Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("6次");
             baseUserVisit.setValue(userVisitbydate.getV6Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV6Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("7次");
             baseUserVisit.setValue(userVisitbydate.getV7Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV7Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("8次");
             baseUserVisit.setValue(userVisitbydate.getV8Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV8Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("9次");
             baseUserVisit.setValue(userVisitbydate.getV9Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV9Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("10次");
             baseUserVisit.setValue(userVisitbydate.getV10Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV10Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("11-15次");
             baseUserVisit.setValue(userVisitbydate.getV11_15Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV11_15Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("16-50次");
             baseUserVisit.setValue(userVisitbydate.getV16_50Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV16_50Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("51-100次");
             baseUserVisit.setValue(userVisitbydate.getV51_100Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV51_100Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("101-200次");
             baseUserVisit.setValue(userVisitbydate.getV101_200Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV101_200Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("201-300次");
             baseUserVisit.setValue(userVisitbydate.getV201_300Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV201_300Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("300次以上");
             baseUserVisit.setValue(userVisitbydate.getV300Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisitbydate.getV300Uv()));
             baseUserVisitList.add(baseUserVisit);
         }
 
@@ -770,51 +1081,66 @@ public class ExportReportServiceImpl implements IExportReportService {
         List<UserPvbydate> userPvbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<UserPvbydate>(UserPvbydate.class));
         List<BaseUserVisit> baseUserVisitList = new ArrayList<BaseUserVisit>();
         BaseUserVisit baseUserVisit = null;
+        int total = 0;
         if (userPvbydateList.size() > 0) {
             UserPvbydate userPvbydate = userPvbydateList.get(0);
+            
+            total = userPvbydate.getPv1Uv()+userPvbydate.getPv2_5Uv()+userPvbydate.getPv6_10Uv()+userPvbydate.getPv11_20Uv()+userPvbydate.getPv21_30Uv()
+            +userPvbydate.getPv31_40Uv()+userPvbydate.getPv41_50Uv()+userPvbydate.getPv51_100Uv()+userPvbydate.getPv101Uv();
+            
+            
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("1页");
             baseUserVisit.setValue(userPvbydate.getPv1Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userPvbydate.getPv1Uv()));;
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("2-5页");
             baseUserVisit.setValue(userPvbydate.getPv2_5Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userPvbydate.getPv2_5Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("6-10页");
             baseUserVisit.setValue(userPvbydate.getPv6_10Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userPvbydate.getPv6_10Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("11-20页");
             baseUserVisit.setValue(userPvbydate.getPv11_20Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userPvbydate.getPv11_20Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("21-30页");
             baseUserVisit.setValue(userPvbydate.getPv21_30Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userPvbydate.getPv21_30Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("31-40页");
             baseUserVisit.setValue(userPvbydate.getPv31_40Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userPvbydate.getPv31_40Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("41-50页");
             baseUserVisit.setValue(userPvbydate.getPv41_50Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userPvbydate.getPv41_50Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("51-100页");
             baseUserVisit.setValue(userPvbydate.getPv51_100Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userPvbydate.getPv51_100Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("100页以上");
             baseUserVisit.setValue(userPvbydate.getPv101Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userPvbydate.getPv101Uv()));
             baseUserVisitList.add(baseUserVisit);
         }
         return baseUserVisitList;
@@ -840,68 +1166,333 @@ public class ExportReportServiceImpl implements IExportReportService {
         List<UserVisittimebydate> userVisitTimebydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<UserVisittimebydate>(UserVisittimebydate.class));
         List<BaseUserVisit> baseUserVisitList = new ArrayList<BaseUserVisit>();
         BaseUserVisit baseUserVisit = null;
+        int total = 0;
         if (userVisitTimebydateList.size() > 0) {
             UserVisittimebydate userVisittimebydate = userVisitTimebydateList.get(0);
 
+            total = userVisittimebydate.getVt0_10Uv() + userVisittimebydate.getVt10_30Uv() + userVisittimebydate.getVt30_60Uv() + userVisittimebydate.getVt60_120Uv() + userVisittimebydate.getVt120_180Uv()
+            + userVisittimebydate.getVt180_240Uv() + userVisittimebydate.getVt240_300Uv() + userVisittimebydate.getVt300_600Uv() + userVisittimebydate.getVt600_1800Uv() + userVisittimebydate.getVt1800_3600Uv()
+            + userVisittimebydate.getVt3600Uv();
+            
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("0-10秒");
             baseUserVisit.setValue(userVisittimebydate.getVt0_10Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt0_10Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("10-30秒");
             baseUserVisit.setValue(userVisittimebydate.getVt10_30Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt10_30Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("30-60秒");
             baseUserVisit.setValue(userVisittimebydate.getVt30_60Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt30_60Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("1-2分钟");
             baseUserVisit.setValue(userVisittimebydate.getVt60_120Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt60_120Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("2-3分钟");
             baseUserVisit.setValue(userVisittimebydate.getVt120_180Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt120_180Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("3-4分钟");
             baseUserVisit.setValue(userVisittimebydate.getVt180_240Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt180_240Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("4-5分钟");
             baseUserVisit.setValue(userVisittimebydate.getVt240_300Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt240_300Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("5-10分钟");
             baseUserVisit.setValue(userVisittimebydate.getVt300_600Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt300_600Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("10-30分钟");
             baseUserVisit.setValue(userVisittimebydate.getVt600_1800Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt600_1800Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("30-60分钟");
             baseUserVisit.setValue(userVisittimebydate.getVt1800_3600Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt1800_3600Uv()));
             baseUserVisitList.add(baseUserVisit);
 
             baseUserVisit = new BaseUserVisit();
             baseUserVisit.setKey("1小时以上");
             baseUserVisit.setValue(userVisittimebydate.getVt3600Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisittimebydate.getVt3600Uv()));
             baseUserVisitList.add(baseUserVisit);
         }
         return baseUserVisitList;
     }
+    
+    
 
-    private FlowSummary getFlowByTimeframe(GetFlowRequest getFlowRequest) {
+    @Override
+	public List<BaseUserVisit> getUserVisitUri(DownloadBaseRequest downloadBaseRequest) {
+    	MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        String getListSql = "select sum(pv1_uri) as pv1_uri,sum(pv2_uri) as pv2_uri,sum(pv3_uri) as pv3_uri,sum(pv4_uri) as pv4_uri,sum(pv5_uri) as pv5_uri,sum(pv6_uri) as pv6_uri,sum(pv7_uri) as pv7_uri,sum(pv8_uri) as pv8_uri,sum(pv9_uri) as pv9_uri,sum(pv10_uri) as pv10_uri,sum(pv11_15_uri) as pv11_15_uri,sum(pv16_20_uri) as pv16_20_uri,sum(pv21_uri) as pv21_uri from user_visituri_bydate t";
+        String where = "";
+
+        where = buildChannelFilter(downloadBaseRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadBaseRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadBaseRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadBaseRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadBaseRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(downloadBaseRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadBaseRequest.getProvince(), paramMap, where);
+
+        if (StringUtils.isNotBlank(where)) {
+            getListSql += " where " + where.substring(4);
+        }
+        List<UserVisituribydate> userVisitTimebydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<UserVisituribydate>(UserVisituribydate.class));
+        List<BaseUserVisit> baseUserVisitList = new ArrayList<BaseUserVisit>();
+        BaseUserVisit baseUserVisit = null;
+        int total = 0;
+        if (userVisitTimebydateList.size() > 0) {
+        	UserVisituribydate userVisituribydate = userVisitTimebydateList.get(0);
+
+            total = userVisituribydate.getPv1Uri()+ userVisituribydate.getPv2Uri() + userVisituribydate.getPv3Uri() + userVisituribydate.getPv4Uri() + userVisituribydate.getPv5Uri()
+            + userVisituribydate.getPv6Uri() + userVisituribydate.getPv7Uri() + userVisituribydate.getPv8Uri() + userVisituribydate.getPv9Uri() + userVisituribydate.getPv10Uri()
+            + userVisituribydate.getPv11_15Uri() + userVisituribydate.getPv16_20Uri() + userVisituribydate.getPv21Uri();
+            
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("1页");
+            baseUserVisit.setValue(userVisituribydate.getPv1Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv1Uri()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("2页");
+            baseUserVisit.setValue(userVisituribydate.getPv2Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv2Uri()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("3页");
+            baseUserVisit.setValue(userVisituribydate.getPv3Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv3Uri()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("4页");
+            baseUserVisit.setValue(userVisituribydate.getPv4Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv4Uri()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("5页");
+            baseUserVisit.setValue(userVisituribydate.getPv5Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv5Uri()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("6页");
+            baseUserVisit.setValue(userVisituribydate.getPv6Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv6Uri()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("7页");
+            baseUserVisit.setValue(userVisituribydate.getPv7Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv7Uri()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("8页");
+            baseUserVisit.setValue(userVisituribydate.getPv8Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv8Uri()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("9页");
+            baseUserVisit.setValue(userVisituribydate.getPv9Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv9Uri()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("10页");
+            baseUserVisit.setValue(userVisituribydate.getPv10Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv10Uri()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("11-15页");
+            baseUserVisit.setValue(userVisituribydate.getPv11_15Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv11_15Uri()));
+            baseUserVisitList.add(baseUserVisit);
+            
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("16-20页");
+            baseUserVisit.setValue(userVisituribydate.getPv16_20Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv16_20Uri()));
+            baseUserVisitList.add(baseUserVisit);
+            
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("21以上页");
+            baseUserVisit.setValue(userVisituribydate.getPv21Uri());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userVisituribydate.getPv21Uri()));
+            baseUserVisitList.add(baseUserVisit);
+            
+        }
+        return baseUserVisitList;
+	}
+
+	@Override
+	public List<BaseUserVisit> getUserLatestTime(DownloadBaseRequest downloadBaseRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        String getListSql = "select countDistinct(if(p3.days_diff = 0, p3.distinct_id, NULL)) AS lt0_uv,countDistinct(if(p3.days_diff = 1, p3.distinct_id, NULL)) AS lt1_uv,countDistinct(if(p3.days_diff = 2, p3.distinct_id, NULL)) AS lt2_uv,"
+        		+ "countDistinct(if(p3.days_diff > 2 AND p3.days_diff <=7, p3.distinct_id, NULL)) AS lt3_7_uv,countDistinct(if(p3.days_diff > 7 AND p3.days_diff <=15, p3.distinct_id, NULL)) AS lt8_15_uv,"
+        		+ "countDistinct(if(p3.days_diff > 15 AND p3.days_diff <=30, p3.distinct_id, NULL)) AS lt16_30_uv,countDistinct(if(p3.days_diff > 30 AND p3.days_diff <=90, p3.distinct_id, NULL)) AS lt31_90_uv,"
+        		+ "countDistinct(if(p3.days_diff > 90, p3.distinct_id, NULL)) AS lt90_uv from "
+        		+ "(select p1.distinct_id as distinct_id,dateDiff('day',toDate(p2.max_time),if(p2.distinct_id ='',toDate(p2.max_time),toDate(p1.max_time))) as days_diff from ";
+        String getCurrentSql = "(SELECT t.distinct_id AS distinct_id, max(t.stat_date) AS max_time FROM visitor_detail_byinfo t ";
+        String getLetastTimeSql = "(SELECT t.distinct_id AS distinct_id, max(t.stat_date) AS max_time FROM visitor_detail_byinfo t ";
+        String where = "";
+        String beforeWhere = "";
+        where = buildChannelByAllFilter(downloadBaseRequest.getChannel(), paramMap, where);
+        where = buildProjectNameFilter(downloadBaseRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeByAllFilter(downloadBaseRequest.getVisitorType(), paramMap, where);
+        where = buildCountryByAllFilter(downloadBaseRequest.getCountry(), paramMap, where);
+        where = buildProvinceByAllFilter(downloadBaseRequest.getProvince(), paramMap, where);
+        beforeWhere += where;
+        beforeWhere = buildStatDateStartLessThanFilter(downloadBaseRequest.getStartTime(), paramMap, beforeWhere);
+        where = buildStatDateStartFilter(downloadBaseRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadBaseRequest.getEndTime(), paramMap, where);
+        
+        if (StringUtils.isNotBlank(where)) {
+        	getCurrentSql += " where " + where.substring(4);
+        	getCurrentSql += " group by distinct_id) p1 ";
+            getLetastTimeSql += " where " + beforeWhere.substring(4);
+            getLetastTimeSql += " group by distinct_id) p2  ";
+        }
+        getListSql += getCurrentSql +" left join " + getLetastTimeSql +" on p1.distinct_id=p2.distinct_id ";
+        getListSql += ") p3";
+        List<UserLatesttimebydate> userLatesttimebydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<UserLatesttimebydate>(UserLatesttimebydate.class));
+        List<BaseUserVisit> baseUserVisitList = new ArrayList<BaseUserVisit>();
+        BaseUserVisit baseUserVisit = null;
+        int total = 0;
+        if (userLatesttimebydateList.size() > 0) {
+        	UserLatesttimebydate userLatesttimebydate = userLatesttimebydateList.get(0);
+            
+            total = userLatesttimebydate.getLt0Uv()+userLatesttimebydate.getLt1Uv()+userLatesttimebydate.getLt2Uv()+userLatesttimebydate.getLt3_7Uv()+userLatesttimebydate.getLt8_15Uv()
+            +userLatesttimebydate.getLt16_30Uv()+userLatesttimebydate.getLt31_90Uv()+userLatesttimebydate.getLt90Uv();
+            
+            
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("1天内");
+            baseUserVisit.setValue(userLatesttimebydate.getLt0Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userLatesttimebydate.getLt0Uv()));;
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("1天前");
+            baseUserVisit.setValue(userLatesttimebydate.getLt1Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userLatesttimebydate.getLt1Uv()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("2天前");
+            baseUserVisit.setValue(userLatesttimebydate.getLt2Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userLatesttimebydate.getLt2Uv()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("3-7天前");
+            baseUserVisit.setValue(userLatesttimebydate.getLt3_7Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userLatesttimebydate.getLt3_7Uv()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("8-15天前");
+            baseUserVisit.setValue(userLatesttimebydate.getLt8_15Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userLatesttimebydate.getLt8_15Uv()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("16-30天前");
+            baseUserVisit.setValue(userLatesttimebydate.getLt16_30Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userLatesttimebydate.getLt16_30Uv()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("31-90天前");
+            baseUserVisit.setValue(userLatesttimebydate.getLt31_90Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userLatesttimebydate.getLt31_90Uv()));
+            baseUserVisitList.add(baseUserVisit);
+
+            baseUserVisit = new BaseUserVisit();
+            baseUserVisit.setKey("90天以上前");
+            baseUserVisit.setValue(userLatesttimebydate.getLt90Uv());
+            baseUserVisit.setRate(MathUtils.getRateByMultip100(total, userLatesttimebydate.getLt90Uv()));
+            baseUserVisitList.add(baseUserVisit);
+        }
+        return baseUserVisitList;
+	}
+	
+	
+
+	@Override
+	public GetOsDetailResponse getOsDetail(DownloadOsRequest downloadOsRequest) {
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        String getListSql = "select os,sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv,sum(new_uv) as new_uv,sum(visit_time) as visit_time,sum(bounce_count) as bounce_count from os_detail_bydate t";
+        String where = "";
+
+        where = buildChannelFilter(downloadOsRequest.getChannel(), paramMap, where);
+        where = buildStatDateStartFilter(downloadOsRequest.getStartTime(), paramMap, where);
+        where = buildStatDateEndFilter(downloadOsRequest.getEndTime(), paramMap, where);
+        where = buildProjectNameFilter(downloadOsRequest.getProjectName(), paramMap, where);
+        where = buildVisitorTypeFilter(downloadOsRequest.getVisitorType(), paramMap, where);
+        where = buildCountryFilter(downloadOsRequest.getCountry(), paramMap, where);
+        where = buildProvinceFilter(downloadOsRequest.getProvince(), paramMap, where);
+
+        if (StringUtils.isNotBlank(where)) {
+            getListSql += " where " + where.substring(4);
+        }
+        getListSql += " group by t.os";
+        getListSql += " order by pv desc ";
+        List<OsDetailbydate> osDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<OsDetailbydate>(OsDetailbydate.class));
+
+        List<FlowDetail> flowDetailList = new ArrayList<>();
+
+        OsDetailbydate totalOsDetailbydate = null;
+
+        Optional<OsDetailbydate> optionalOsDetailbydate = osDetailbydateList.stream().filter(f -> f.getOs().equalsIgnoreCase("all")).findAny();
+        if (optionalOsDetailbydate.isPresent()) {
+            totalOsDetailbydate = optionalOsDetailbydate.get();
+        }
+
+        GetOsDetailResponse response = new GetOsDetailResponse();
+        for (OsDetailbydate osDetailbydate : osDetailbydateList) {
+        	if (osDetailbydate.getOs().equalsIgnoreCase("all")) {
+        		continue;
+        	}
+            FlowDetail flowDetail = assemblyFlowDetail(osDetailbydate, totalOsDetailbydate);
+            flowDetail.setOs(StringUtils.isEmpty(osDetailbydate.getOs()) ? Constants.DEFAULT_OS : osDetailbydate.getOs());
+            flowDetailList.add(flowDetail);
+        }
+        response.setData(flowDetailList);
+        return response;
+	}
+
+	private FlowSummary getFlowByTimeframe(GetFlowRequest getFlowRequest) {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String getListSql = "select sum(pv) as pv,sum(ip_count) as ip_count,sum(visit_count) as visit_count,sum(uv) as uv, sum(visit_time) as visit_time,sum(bounce_count) as bounce_count from flow_trend_bydate t";
 
@@ -1323,6 +1914,17 @@ public class ExportReportServiceImpl implements IExportReportService {
         paramMap.addValue("starttime", this.yMdFORMAT.get().format(startTime));
         return where;
     }
+    
+    private String buildStatDateStartLessThanFilter(String _startTime, MapSqlParameterSource paramMap, String where) {
+        return buildStatDateStartLessThanFilter(_startTime, paramMap, where, "day");
+    }
+
+    private String buildStatDateStartLessThanFilter(String _startTime, MapSqlParameterSource paramMap, String where, String timeType) {
+        Timestamp startTime = transformFilterTime(_startTime, true, timeType);
+        where += " and t.stat_date<:starttimeLessThan";
+        paramMap.addValue("starttimeLessThan", this.yMdFORMAT.get().format(startTime));
+        return where;
+    }
 
     private String buildProvinceFilter(List<String> provinceList, MapSqlParameterSource paramMap, String where) {
         if (provinceList == null) {
@@ -1548,5 +2150,15 @@ public class ExportReportServiceImpl implements IExportReportService {
     	} else {
     		return isFirstDay;
     	}
+    }
+    
+    private String extractHost(String url) {
+        Pattern pattern = Pattern.compile("(http|https)://(www.)?(\\w+(\\.)?)+");
+        String host = "";
+        Matcher hostMatcher = pattern.matcher(url);
+        if (hostMatcher.find()) {
+            host = hostMatcher.group();
+        }
+        return host;
     }
 }

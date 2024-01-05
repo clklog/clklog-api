@@ -9,7 +9,7 @@ import lombok.Data;
 
 @Schema(description = "用户周期信息")
 @Data
-public class GetVisitorBaseChurnAndRemain {
+public class GetVisitorBaseChurn {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Schema(description = "统计时间")
@@ -22,5 +22,5 @@ public class GetVisitorBaseChurnAndRemain {
     private String rawStatTime;
 
     @Schema(description = "详情")
-    List<GetVisitorBaseChurnAndRemainData> rows;
+    List<GetVisitorBaseChurnData> rows;
 }

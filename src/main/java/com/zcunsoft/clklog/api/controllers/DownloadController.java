@@ -2,6 +2,7 @@ package com.zcunsoft.clklog.api.controllers;
 
 import com.zcunsoft.clklog.api.models.channel.GetChannelDetailResponse;
 import com.zcunsoft.clklog.api.models.device.GetDeviceDetailResponse;
+import com.zcunsoft.clklog.api.models.os.GetOsDetailResponse;
 import com.zcunsoft.clklog.api.models.searchword.GetSearchWordDetailResponse;
 import com.zcunsoft.clklog.api.models.sourcewebsite.GetSourceWebsiteDetailPageResponse;
 import com.zcunsoft.clklog.api.models.trend.FlowDetail;
@@ -13,9 +14,13 @@ import com.zcunsoft.clklog.api.poi.DownloadBaseRequest;
 import com.zcunsoft.clklog.api.poi.DownloadChannelRequest;
 import com.zcunsoft.clklog.api.poi.DownloadDeviceRequest;
 import com.zcunsoft.clklog.api.poi.DownloadFlowTrendRequest;
+import com.zcunsoft.clklog.api.poi.DownloadOsRequest;
 import com.zcunsoft.clklog.api.poi.DownloadRequest;
 import com.zcunsoft.clklog.api.poi.DownloadSearchWordRequest;
 import com.zcunsoft.clklog.api.poi.DownloadSourceWebsiteRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitUriDownpvRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitUriEntryRequest;
+import com.zcunsoft.clklog.api.poi.DownloadVisitUriExitRequest;
 import com.zcunsoft.clklog.api.poi.DownloadVisitorListRequest;
 import com.zcunsoft.clklog.api.poi.DownloadVisitorRequest;
 import com.zcunsoft.clklog.api.poi.ExcelExportUtils;
@@ -86,17 +91,41 @@ public class DownloadController {
         }
     }
     
-//    @Operation(summary = "下载受访页面-入口页分析")
-//    @RequestMapping(path = "/exportVisitUriEntryDetail", method = RequestMethod.POST)
-//    public void exportVisitUriEntryDetail(@RequestBody DownloadRequest downloadRequest, HttpServletRequest request,HttpServletResponse respones) {
-//    	List<FlowDetail> dataList = exportReportService.getVisitUriDetailList(downloadRequest);
-//    	FlowDetail totalData = exportReportService.getVisitUriTotal(downloadRequest);
-//    	try {
-//    		ExcelExportUtils.exportVisitUriDetail(dataList,totalData,downloadRequest.getCols(), request,respones);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
+    @Operation(summary = "下载受访页面-入口页分析")
+    @RequestMapping(path = "/exportVisitUriEntryDetail", method = RequestMethod.POST)
+    public void exportVisitUriEntryDetail(@RequestBody DownloadVisitUriEntryRequest downloadVisitUriEntryRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	List<FlowDetail> dataList = exportReportService.getVisitUriEntryDetailList(downloadVisitUriEntryRequest);
+    	FlowDetail totalData = exportReportService.getVisitUriEntryTotal(downloadVisitUriEntryRequest);
+    	try {
+    		ExcelExportUtils.exportVisitUriEntryDetail(dataList,totalData,downloadVisitUriEntryRequest.getCols(), request,respones);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    @Operation(summary = "下载受访页面-退出页页分析")
+    @RequestMapping(path = "/exportVisitUriExitDetail", method = RequestMethod.POST)
+    public void exportVisitUriExitDetail(@RequestBody DownloadVisitUriExitRequest downloadVisitUriExitRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	List<FlowDetail> dataList = exportReportService.getVisitUriExitDetailList(downloadVisitUriExitRequest);
+    	FlowDetail totalData = exportReportService.getVisitUriExitTotal(downloadVisitUriExitRequest);
+    	try {
+    		ExcelExportUtils.exportVisitUriExitDetail(dataList,totalData,downloadVisitUriExitRequest.getCols(), request,respones);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    @Operation(summary = "下载受访页面-贡献下游浏览量页分析")
+    @RequestMapping(path = "/exportVisitUriDownpvDetail", method = RequestMethod.POST)
+    public void exportVisitUriDownpvDetail(@RequestBody DownloadVisitUriDownpvRequest downloadVisitUriDownpvRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	List<FlowDetail> dataList = exportReportService.getVisitUriDownpvDetailList(downloadVisitUriDownpvRequest);
+    	FlowDetail totalData = exportReportService.getVisitUriDownpvTotal(downloadVisitUriDownpvRequest);
+    	try {
+    		ExcelExportUtils.exportVisitUriDownpvDetail(dataList,totalData,downloadVisitUriDownpvRequest.getCols(), request,respones);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     
     @Operation(summary = "下载来源网站分析")
     @RequestMapping(path = "/exportSourceWebsiteDetail", method = RequestMethod.POST)
@@ -162,8 +191,21 @@ public class DownloadController {
     	List<BaseUserVisit> pvList =  exportReportService.getUserPv(downloadBaseRequest);
     	List<BaseUserVisit> visitList =  exportReportService.getUserVisit(downloadBaseRequest);
     	List<BaseUserVisit> visitTimeList =  exportReportService.getUserVisitTime(downloadBaseRequest);
+    	List<BaseUserVisit> visitUriList = exportReportService.getUserVisitUri(downloadBaseRequest);
+    	List<BaseUserVisit> latestTimeList = exportReportService.getUserLatestTime(downloadBaseRequest);
     	try {
-    		ExcelExportUtils.exportVisitorList(pvList,visitList,visitTimeList,request,respones);
+    		ExcelExportUtils.exportVisitorList1(pvList,visitList,visitTimeList,visitUriList,latestTimeList,request,respones);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    @Operation(summary = "下载操作系统分析")
+    @RequestMapping(path = "/exportOsDetail", method = RequestMethod.POST)
+    public void exportOsDetail(@RequestBody DownloadOsRequest downloadOsRequest, HttpServletRequest request,HttpServletResponse respones) {
+    	GetOsDetailResponse getOsDetailResponse = exportReportService.getOsDetail(downloadOsRequest);
+    	try {
+    		ExcelExportUtils.exportOsDetail(getOsDetailResponse.getData(),downloadOsRequest.getCols(), request,respones);
         } catch (Exception e) {
             e.printStackTrace();
         }

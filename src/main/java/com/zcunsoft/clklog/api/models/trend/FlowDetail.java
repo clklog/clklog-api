@@ -93,6 +93,10 @@ public class FlowDetail {
     @Schema(description = "贡献下游流量")
     private int downPvCount;
     
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "贡献下游流量率")
+    private Float downPvRate;
+    
     @Schema(description = "退出页次数")
     private int exitCount;
     
@@ -102,6 +106,10 @@ public class FlowDetail {
 
     @Schema(description = "入口页次数")
     private int entryCount;
+    
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "入口率")
+    private Float entryRate;
     
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Schema(description = "页面URL")

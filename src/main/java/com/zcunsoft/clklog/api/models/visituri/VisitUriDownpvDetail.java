@@ -27,9 +27,30 @@ public class VisitUriDownpvDetail {
     @Schema(description = "贡献下游流量")
     private int downPvCount;
     
+    @Schema(description = "贡献下游流量率")
+    private float downPvRate;
+    
     @Schema(description = "标题")
     private String title;
     
     @Schema(description = "路径")
     private String uriPath;
+    
+    @Schema(description = "浏览量占比")
+    private float pvRate;
+
+    @Schema(description = "访问次数")
+    private int visitCount;
+
+    @Schema(description = "新访客数")
+    private int newUv;
+
+    @Schema(description = "平均访问页数")
+    private float avgPv;
+
+    @Schema(description = "跳出率")
+    private float bounceRate;
+    
+    @Schema(description = "新访客比率")
+    private float newUvRate;
 }
