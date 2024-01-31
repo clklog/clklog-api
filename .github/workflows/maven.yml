@@ -35,3 +35,19 @@ jobs:
       with:
         name: Package
         path: staging
+    # 设置 jobs Maven pom 版本环境变量
+    - name: Set Release version env variable
+      run: |
+        echo "RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+    - name: "Build & test"
+      run: |
+        echo "done!"
+    # 上传文件并发布 Release
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "${{ env.RELEASE_VERSION }}"
+        prerelease: false
+        title: "Release ${{ env.RELEASE_VERSION }}"
+        files: |
+          staging/*.jar
