@@ -1,5 +1,9 @@
-FROM ubuntu-latest
+FROM openjdk:8
+
 VOLUME /tmp
-ADD staging/clklog-api-1.1.0.jar /app.jar
+ARG JAR_FILE
+ENV JAVA_OPTS=
+ENTRYPOINT ["entrypoint.sh"]
 EXPOSE 8087
-ENTRYPOINT [ "sh", "-c", "java $JAVA_OPTS -jar /app.jar" ]
+COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY ${JAR_FILE} app.jar
