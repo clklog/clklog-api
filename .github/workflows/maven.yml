@@ -74,8 +74,8 @@ jobs:
       with:
         # TODO: Use Secrets when Public
         registry: ${{ secrets.ALIYUN_REGISTRY }}
-        username: ${{ secrets.ALIYUN_USER }}
-        password: ${{ secrets.ALIYUN_PASSWORD }}
+        username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
+        password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
     - name: Push image to Aliyun Docker Registry
       run: |
         docker buildx imagetools create \
