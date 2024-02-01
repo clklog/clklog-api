@@ -66,4 +66,19 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         build-args: |
           "JAR_FILE=staging/clklog-api-${{ env.RELEASE_VERSION }}.jar"
+    - name: Set Docker image tag
+      id: set-tag
+      run: echo "::set-output name=tag::$(if [ $GITHUB_REF == 'refs/heads/main' ]; then echo latest; else echo ${GITHUB_REF#refs/heads/}; fi)"
+    - name: Login to Aliyun Docker Registry
+      uses: docker/login-action@v2
+      with:
+        # TODO: Use Secrets when Public
+        registry: ${{ secrets.ALIYUN_REGISTRY }}
+        username: ${{ secrets.ALIYUN_USER }}
+        password: ${{ secrets.ALIYUN_PASSWORD }}
+    - name: Push image to Aliyun Docker Registry
+      run: |
+        docker buildx imagetools create \
+          --tag ${{ secrets.ALIYUN_REGISTRY }}/zcunsoft/clklog_api:${{ steps.set-tag.outputs.tag }} \
+          zcunsoft/clklog-api:${{ steps.set-tag.outputs.tag }}
 
