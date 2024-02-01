@@ -63,7 +63,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: "clklog/clklogapi:latest"
+        tags: ${{ steps.meta.outputs.tags }}
         build-args: |
           "JAR_FILE=staging/clklog-api-${{ env.RELEASE_VERSION }}.jar"
 
