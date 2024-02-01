@@ -57,6 +57,6 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         push: true
-        tags: "${{ env.RELEASE_VERSION }}"
+        tags: ${{ github.repository }}:${{ steps.vars.outputs.tag }}
         build-args: JAR_FILE=staging/clklog-api-${{ env.RELEASE_VERSION }}.jar
 
