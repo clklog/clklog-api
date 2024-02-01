@@ -1,6 +1,6 @@
 FROM openjdk:8
 
-
+VOLUME /tmp
 ARG JAR_FILE
 ENV JAVA_OPTS=
 ENTRYPOINT ["entrypoint.sh"]
