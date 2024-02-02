@@ -51,7 +51,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: zcunsoft/clklog-api
+        images: zcunsoft/api
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
@@ -79,6 +79,6 @@ jobs:
     - name: Push image to Aliyun Docker Registry
       run: |
         docker buildx imagetools create \
-          --tag ${{ secrets.ALIYUN_REGISTRY }}/zcunsoft/clklog_api:${{ steps.set-tag.outputs.tag }} \
-          zcunsoft/clklog-api:${{ steps.set-tag.outputs.tag }}
+          --tag ${{ secrets.ALIYUN_REGISTRY }}/clklog/api:${{ steps.set-tag.outputs.tag }} \
+          zcunsoft/api:${{ steps.set-tag.outputs.tag }}
 
