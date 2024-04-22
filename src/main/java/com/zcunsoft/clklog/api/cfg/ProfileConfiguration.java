@@ -13,7 +13,7 @@ public class ProfileConfiguration {
 	@Bean(initMethod = "init")
 	public ClientProfileFile clientProfileFile() {
 		return new ClientProfileFile(
-				System.getProperty("user.dir") + File.separator + "setting" + File.separator + "profile.yml");
+				System.getProperty("user.dir") + File.separator + "setting" + File.separator + "profile.json");
 	}
 
 }
