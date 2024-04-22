@@ -10,9 +10,9 @@ import lombok.Data;
 @Data
 public class UpdateProfileRequest {
 
-	@Schema(description = "是否订阅", requiredMode = Schema.RequiredMode.REQUIRED, example = "true,false")
-	@NotNull(message = "是否订阅不能为空")
-	private Boolean subscribed;
+//	@Schema(description = "是否订阅", requiredMode = Schema.RequiredMode.REQUIRED, example = "true,false")
+//	@NotNull(message = "是否订阅不能为空")
+//	private Boolean subscribed;
 
 	/**
 	 * 联系人

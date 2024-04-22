@@ -25,7 +25,7 @@ public class ProfileService {
 
 	public void setSubscribed(UpdateProfileRequest model) {
 		BeanUtils.copyProperties(model, clientProfileFile.getClientProfile());
-//		clientProfileFile.getClientProfile().setSubscribed(true);
+		clientProfileFile.getClientProfile().setSubscribed(true);
 		clientProfileFile.dumpProfile();	
 	}
 	
