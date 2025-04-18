@@ -3187,8 +3187,10 @@ public class ReportServiceImpl implements IReportService {
                     channelList.add(libType.getValue());
                 }
             }
-            where += " and t.lib in (:channel)";
-            paramMap.addValue("channel", channelList);
+            if (!channelList.isEmpty()) {
+                where += " and t.lib in (:channel)";
+                paramMap.addValue("channel", channelList);
+            }
         }
         return where;
     }
