@@ -207,9 +207,12 @@ public class ReportServiceImpl implements IReportService {
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         String getListSql = "select uri as uri,title as title,sum(pv) as pv from visituri_summary_bydate t";
         String getSummarySql = "select sum(pv) as pv from visituri_summary_bydate t";
-        BaseSummaryRequest request = (BaseSummaryRequest) getVisitUriRequest;
 
-        String summaryWhere = buildSummaryWhere(request, paramMap, false, false);
+        String summaryWhere = "";
+        summaryWhere = buildChannelByAllFilter(getVisitUriRequest.getChannel(), paramMap, summaryWhere);
+        summaryWhere = buildStatDateStartFilter(getVisitUriRequest.getStartTime(), paramMap, summaryWhere, getVisitUriRequest.getTimeType());
+        summaryWhere = buildStatDateEndFilter(getVisitUriRequest.getEndTime(), paramMap, summaryWhere, getVisitUriRequest.getTimeType());
+        summaryWhere = buildProjectNameFilter(getVisitUriRequest.getProjectName(), paramMap, summaryWhere);
 
         if (StringUtils.isNotBlank(summaryWhere)) {
             getListSql += " where t.uri <> 'all' and t.title <> 'all' and " + summaryWhere.substring(4);
