@@ -8,11 +8,12 @@ import javax.persistence.Id;
 import java.sql.Timestamp;
 
 /**
- * 访客概要情况.
+ * App崩溃详情表.
  */
-@Entity(name = "visitor_summary_bydate")
+@Entity(name = "crashed_detail_bydate")
 @Data
-public class VisitorSummarybydate {
+//@EqualsAndHashCode(callSuper = true)
+public class CrashedDetailBydate {
 
     /**
      * 统计日期.
@@ -29,13 +30,6 @@ public class VisitorSummarybydate {
     String lib;
 
     /**
-     * 是否首日访问.
-     */
-    @Id
-    @Column
-    String isFirstDay;
-
-    /**
      * 项目编码.
      */
     @Id
@@ -43,16 +37,22 @@ public class VisitorSummarybydate {
     String projectName;
 
     /**
-     * 浏览量.
+     * App版本.
      */
     @Column
-    Long pv;
+    String appVersion;
 
     /**
-     * 访问次数.
+     * 访问次数
      */
     @Column
     Long visitCount;
+
+    /**
+     * 总崩溃数
+     */
+    @Column
+    Long crashedCount;
 
     /**
      * 访客数.
@@ -61,26 +61,39 @@ public class VisitorSummarybydate {
     Long uv;
 
     /**
-     * Ip数.
+     * 崩溃访客数
+     */
+    @Column
+    Long crashedUv;
+
+    /**
+     * IP数.
      */
     @Column
     Long ipCount;
 
     /**
-     * 访问时长
+     * 总设备类型数
      */
     @Column
-    Long visitTime;
-
-    /**
-     * 跳出次数.
-     */
-    @Column
-    Long bounceCount;
+    Long modelCount;
 
     /**
      * 更新时间.
      */
     @Column
     Timestamp updateTime;
+
+    /**
+     * 周数
+     */
+    @Column
+    String dimension;
+
+    /**
+     * 型号
+     */
+    @Column
+    String model;
+
 }

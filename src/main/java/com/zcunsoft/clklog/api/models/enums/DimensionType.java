@@ -1,11 +1,13 @@
 package com.zcunsoft.clklog.api.models.enums;
 
-public enum VisitorType {
-
-    New("新访客","true" ),
-
-    Old("老访客", "false"),
-    All("全部","all") ;
+/**
+ * 时间维度类型
+ */
+public enum DimensionType {
+    hour("按时", "hour"),
+    day("按日", "day"),
+    week("按周", "week"),
+    month("按月", "month");
     /**
      * 枚举值.
      */
@@ -19,7 +21,7 @@ public enum VisitorType {
      * @param value the value
      */
 
-    VisitorType(String name, String value) {
+    DimensionType(String name, String value) {
         this.name = name;
         this.value = value;
     }
@@ -30,18 +32,18 @@ public enum VisitorType {
      * @param name 枚举值
      * @return 枚举
      */
-    public static VisitorType parse(String name) {
-        for (VisitorType codeValue : values()) {
+    public static DimensionType parse(String name) {
+        for (DimensionType codeValue : values()) {
             if (codeValue.value.equalsIgnoreCase(name) || codeValue.name.equalsIgnoreCase(name)) {
                 return codeValue;
             }
         }
-        return  null;
+        return null;
     }
 
     public static String getName(String name) {
-    	VisitorType libType = parse(name);
-        return  libType != null ? libType.getName() : name;
+        DimensionType libType = parse(name);
+        return libType != null ? libType.getName() : name;
     }
 
     /**
