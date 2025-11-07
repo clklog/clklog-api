@@ -1,4 +1,4 @@
-FROM openjdk:8u92-jdk-alpine
+FROM openjdk:8u342-jdk
 
 VOLUME /tmp
 ARG JAR_FILE
