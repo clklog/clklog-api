@@ -1,4 +1,4 @@
-FROM insideo/jdk8:8u152
+FROM livingobjects/jre8:8u121_2
 
 VOLUME /tmp
 ARG JAR_FILE
