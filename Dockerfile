@@ -1,4 +1,4 @@
-FROM livingobjects/jre8:8u121_2
+FROM kdvolder/jdk8:latest
 
 VOLUME /tmp
 ARG JAR_FILE
