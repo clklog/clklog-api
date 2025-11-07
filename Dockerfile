@@ -1,4 +1,4 @@
-FROM kdvolder/jdk8:latest
+FROM openjdk:8u92-jdk-alpine
 
 VOLUME /tmp
 ARG JAR_FILE
