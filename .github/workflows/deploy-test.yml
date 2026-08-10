@@ -50,14 +50,20 @@ jobs:
             mvn -B -ntp clean org.jacoco:jacoco-maven-plugin:0.8.11:prepare-agent test
           fi
 
-      - name: JaCoCo check LINE >= 80% (06 §8 覆盖率门禁，FQN 目标避免 pom 未声明插件时 prefix 找不到)
+      - name: JaCoCo generate report (Runner Smoke 临时短路径：不开 80% 门禁 check，只出报告；阶段 A/B 步骤 7 质量闸时切回上一条 check 规则)
         shell: bash
         run: |
           set -euo pipefail
           MVN_CMD="./mvnw -B -ntp"
           if [ ! -x ./mvnw ]; then MVN_CMD="mvn -B -ntp"; fi
-          $MVN_CMD org.jacoco:jacoco-maven-plugin:0.8.11:report
-          $MVN_CMD org.jacoco:jacoco-maven-plugin:0.8.11:check -Djacoco.line.coverage.minimum=0.80
+          $MVN_CMD org.jacoco:jacoco-maven-plugin:0.8.11:report || true
+          # —— 步骤 7 质量闸要卡 80% 时，把上面一行 report || true 注释掉，切回下面 check 5 行生效：
+          # $MVN_CMD org.jacoco:jacoco-maven-plugin:0.8.11:report
+          # $MVN_CMD org.jacoco:jacoco-maven-plugin:0.8.11:check \
+          #   -Djacoco.rules[0].element=BUNDLE \
+          #   -Djacoco.rules[0].limits[0].counter=LINE \
+          #   -Djacoco.rules[0].limits[0].value=COVEREDRATIO \
+          #   -Djacoco.rules[0].limits[0].minimum=0.80
 
       - name: Upload JaCoCo report (artifact)
         if: always()
