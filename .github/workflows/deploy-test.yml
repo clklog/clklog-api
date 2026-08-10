@@ -1,19 +1,74 @@
-name: Deploy Test Environment
+name: Unit Test Gate + Deploy Test Environment
 
 on:
   workflow_dispatch:
+  push:
+    branches: [aitest]
+  pull_request:
+    branches: [aitest]
   workflow_run:
     workflows:
       - Node.js CI
+    branches: [aitest]
     types:
       - completed
 
-jobs:
-  deploy-test:
-    runs-on:
-      - self-hosted
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
+env:
+  JAVA_VERSION: "8"
+  JAVA_DISTRO: "temurin"
+
+jobs:
+  unit-test-gate:
+    name: mvn test + JaCoCo >=80% gate (hosted, safe for public repo PR)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK 8 + Maven cache
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRO }}
+          cache: maven
+
+      - name: mvnw test + JaCoCo prepare-agent
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x mvnw mvnw.cmd || true
+          ./mvnw -B -ntp clean test
+
+      - name: JaCoCo check LINE >= 80% (06 §8 覆盖率门禁)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./mvnw -B -ntp jacoco:report jacoco:check -Djacoco.line.coverage.minimum=0.80
+
+      - name: Upload JaCoCo report (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-${{ github.event.repository.name }}
+          path: target/site/jacoco/**
+          if-no-files-found: warn
+          retention-days: 30
+
+  deploy-test:
+    name: deploy-test (self-hosted clklog-ce-runner @ 10.10.222.66, only on aitest branch)
+    needs: [unit-test-gate]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/aitest'
+    runs-on: [self-hosted, clklog-ce-runner]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Deploy
         run: |
           echo "Runner: $RUNNER_NAME"
