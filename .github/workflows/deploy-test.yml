@@ -39,26 +39,25 @@ jobs:
           distribution: ${{ env.JAVA_DISTRO }}
           cache: maven
 
-      - name: mvnw test + JaCoCo prepare-agent（若无 mvnw 则使用系统 PATH 中的 mvn）
+      - name: mvnw test + JaCoCo prepare-agent（若无 mvnw 则使用系统 PATH 中的 mvn；prepare-agent 与 test 合并执行，保证 ${argLine} 注入）
         shell: bash
         run: |
           set -euo pipefail
           chmod +x mvnw mvnw.cmd 2>/dev/null || true
           if [ -x ./mvnw ]; then
-            ./mvnw -B -ntp clean test
+            ./mvnw -B -ntp clean org.jacoco:jacoco-maven-plugin:0.8.11:prepare-agent test
           else
-            mvn -B -ntp clean test
+            mvn -B -ntp clean org.jacoco:jacoco-maven-plugin:0.8.11:prepare-agent test
           fi
 
-      - name: JaCoCo check LINE >= 80% (06 §8 覆盖率门禁，若无 mvnw 则使用系统 PATH 中的 mvn）
+      - name: JaCoCo check LINE >= 80% (06 §8 覆盖率门禁，FQN 目标避免 pom 未声明插件时 prefix 找不到)
         shell: bash
         run: |
           set -euo pipefail
-          if [ -x ./mvnw ]; then
-            ./mvnw -B -ntp jacoco:report jacoco:check -Djacoco.line.coverage.minimum=0.80
-          else
-            mvn -B -ntp jacoco:report jacoco:check -Djacoco.line.coverage.minimum=0.80
-          fi
+          MVN_CMD="./mvnw -B -ntp"
+          if [ ! -x ./mvnw ]; then MVN_CMD="mvn -B -ntp"; fi
+          $MVN_CMD org.jacoco:jacoco-maven-plugin:0.8.11:report
+          $MVN_CMD org.jacoco:jacoco-maven-plugin:0.8.11:check -Djacoco.line.coverage.minimum=0.80
 
       - name: Upload JaCoCo report (artifact)
         if: always()
