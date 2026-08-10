@@ -20,7 +20,7 @@ concurrency:
 env:
   JAVA_VERSION: "8"
   JAVA_DISTRO: "temurin"
-
+ 
 jobs:
   unit-test-gate:
     name: mvn test + JaCoCo >=80% gate (hosted, safe for public repo PR)
