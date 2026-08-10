@@ -39,18 +39,26 @@ jobs:
           distribution: ${{ env.JAVA_DISTRO }}
           cache: maven
 
-      - name: mvnw test + JaCoCo prepare-agent
+      - name: mvnw test + JaCoCo prepare-agent（若无 mvnw 则使用系统 PATH 中的 mvn）
         shell: bash
         run: |
           set -euo pipefail
-          chmod +x mvnw mvnw.cmd || true
-          ./mvnw -B -ntp clean test
+          chmod +x mvnw mvnw.cmd 2>/dev/null || true
+          if [ -x ./mvnw ]; then
+            ./mvnw -B -ntp clean test
+          else
+            mvn -B -ntp clean test
+          fi
 
-      - name: JaCoCo check LINE >= 80% (06 §8 覆盖率门禁)
+      - name: JaCoCo check LINE >= 80% (06 §8 覆盖率门禁，若无 mvnw 则使用系统 PATH 中的 mvn）
         shell: bash
         run: |
           set -euo pipefail
-          ./mvnw -B -ntp jacoco:report jacoco:check -Djacoco.line.coverage.minimum=0.80
+          if [ -x ./mvnw ]; then
+            ./mvnw -B -ntp jacoco:report jacoco:check -Djacoco.line.coverage.minimum=0.80
+          else
+            mvn -B -ntp jacoco:report jacoco:check -Djacoco.line.coverage.minimum=0.80
+          fi
 
       - name: Upload JaCoCo report (artifact)
         if: always()
