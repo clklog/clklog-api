@@ -1,5 +1,8 @@
 package com.zcunsoft.clklog.api.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.zcunsoft.clklog.api.models.channel.GetChannelDetailResponse;
 import com.zcunsoft.clklog.api.models.device.GetDeviceDetailResponse;
 import com.zcunsoft.clklog.api.models.searchword.GetSearchWordDetailResponse;
@@ -27,6 +30,8 @@ import java.util.List;
 @RequestMapping(path = "download")
 @Tag(name = "下载", description = "下载")
 public class DownloadController {
+    private static final Logger logger = LoggerFactory.getLogger(DownloadController.class);
+
 
     @Resource
     IExportReportService exportReportService;
@@ -38,7 +43,7 @@ public class DownloadController {
     	try {
     		ExcelExportUtils.exportFlowTrendDetail(getFlowTrendDetailResponse.getData().getDetail(),getFlowTrendDetailResponse.getData().getTotal(),downloadRequest.getCols(), request,respones);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
     }
     
@@ -49,7 +54,7 @@ public class DownloadController {
     	try {
     		ExcelExportUtils.exportSearchWordDetail(getSearchWordDetailResponse.getData().getRows(),downloadRequest.getCols(), request,respones);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
     }
     
@@ -61,7 +66,7 @@ public class DownloadController {
     	try {
     		ExcelExportUtils.exportAreaDetail(areaDetailList,totalAreaDetail,downloadRequest.getCols(), request,respones);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
     }
     
@@ -73,7 +78,7 @@ public class DownloadController {
     	try {
     		ExcelExportUtils.exportVisitUriDetail(dataList,totalData,downloadRequest.getCols(), request,respones);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
     }
     
@@ -84,7 +89,7 @@ public class DownloadController {
     	try {
     		ExcelExportUtils.exportSourceWebSiteDetail(getSourceWebsiteDetailPageResponse.getData().getRows(),getSourceWebsiteDetailPageResponse.getData().getSummary(),downloadRequest.getCols(), request,respones);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
     }
     
@@ -96,7 +101,7 @@ public class DownloadController {
     	try {
     		ExcelExportUtils.exportVisitorDetail(getVisitorDetailResponse.getData(),totalData,downloadRequest.getCols(), request,respones);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
     }
     
@@ -107,7 +112,7 @@ public class DownloadController {
     	try {
     		ExcelExportUtils.exportDeviceDetail(getDeviceDetailResponse.getData(),downloadRequest.getCols(), request,respones);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
     }
     
@@ -118,7 +123,7 @@ public class DownloadController {
     	try {
     		ExcelExportUtils.exportChannelDetail(getChannelDetailResponse.getData(),downloadRequest.getCols(), request,respones);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
     }
     
@@ -130,7 +135,7 @@ public class DownloadController {
     	try {
     		ExcelExportUtils.exportVisitorList(detailList,total, downloadRequest.getCols(),request,respones);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
     }
     
@@ -144,7 +149,7 @@ public class DownloadController {
     	try {
     		ExcelExportUtils.exportVisitorList(pvList,visitList,visitTimeList,request,respones);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
     }
 }

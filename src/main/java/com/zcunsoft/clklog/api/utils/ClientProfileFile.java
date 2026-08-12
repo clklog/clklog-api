@@ -47,7 +47,7 @@ public class ClientProfileFile extends File {
 //							obj.containsKey(SUBSCRIBED) && Boolean.parseBoolean(obj.get(SUBSCRIBED).toString()));
 //				}
 //			} catch (FileNotFoundException e) {
-//				e.printStackTrace();
+//				log.error("unexpected error", e);
 //				log.error("failed to load profiles.", e);
 //			} finally {
 //			}
@@ -66,7 +66,7 @@ public class ClientProfileFile extends File {
 //				writer = new FileWriter(this);
 //				yaml.dump(data, writer);
 //			} catch (IOException e) {
-//				e.printStackTrace();
+//				log.error("unexpected error", e);
 //				log.error("failed to init profiles.", e);
 //			}
 //		}
@@ -79,10 +79,8 @@ public class ClientProfileFile extends File {
 				clientProfile = mapper.readValue(new FileReader(this), ClientProfile.class);
 //				clientProfile = yaml.loadAs(new FileReader(this), ClientProfile.class);
 			} catch (FileNotFoundException e) {
-				e.printStackTrace();
 				log.error("failed to load profiles.", e);
 			} catch (IOException e) {
-				e.printStackTrace();
 				log.error("failed to parse profiles.", e);
 			} finally {
 			}
@@ -100,7 +98,6 @@ public class ClientProfileFile extends File {
 //				yaml.dump(clientProfile, writer);
 				mapper.writeValue(writer, clientProfile);
 			} catch (IOException e) {
-				e.printStackTrace();
 				log.error("failed to init profiles.", e);
 			}
 		}
@@ -121,7 +118,7 @@ public class ClientProfileFile extends File {
 //					writer = new FileWriter(this);
 //					yaml.dump(data, writer);
 //				} catch (IOException e) {
-//					e.printStackTrace();
+//					log.error("unexpected error", e);
 //					log.error("failed to dump profiles.", e);
 //				}
 //			}
@@ -139,7 +136,6 @@ public class ClientProfileFile extends File {
 //					yaml.dump(clientProfile, writer);
 					mapper.writeValue(writer, clientProfile);
 				} catch (IOException e) {
-					e.printStackTrace();
 					log.error("failed to dump profiles.", e);
 				}
 			}

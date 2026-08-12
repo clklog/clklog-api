@@ -12,6 +12,7 @@ import com.zcunsoft.clklog.api.models.summary.GetCrashedResponseData;
 import com.zcunsoft.clklog.api.repository.LogAppCrashedRepository;
 import com.zcunsoft.clklog.api.services.utils.FilterBuildUtils;
 import com.zcunsoft.clklog.api.utils.Formatters;
+import com.zcunsoft.clklog.api.utils.PageLimitUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
@@ -161,7 +162,9 @@ public class AppCrashReportService {
      * @return 分页获取App崩溃详情的响应
      */
     public AppCrashedPageResponse pageQueryAppCrashedLog(AppCrashedPageRequest pageRequest) {
-        Pageable pageable = PageRequest.of(pageRequest.getPageNum() - 1, pageRequest.getPageSize(),
+        Pageable pageable = PageRequest.of(
+                PageLimitUtil.safePageNum(pageRequest.getPageNum()) - 1,
+                PageLimitUtil.safePageSize(pageRequest.getPageSize()),
                 Sort.by(Sort.Direction.DESC, "logTime"));
 
         Specification<LogAppCrashed> spec = (root, query, cb) -> {

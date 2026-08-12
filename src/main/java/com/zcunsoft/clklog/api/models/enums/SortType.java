@@ -76,7 +76,8 @@ public enum SortType {
 
     
     private static String getSortSqlFormat(String sortName,String sortOrder) {
-    	
+    	sortOrder = normalizeSortOrder(sortOrder);
+
     	if("avgPv".equals(sortName)) {
     		return " order by if(visit_count == 0 , 0 ,pv/visit_count) "+ sortOrder;
     	}
@@ -108,6 +109,16 @@ public enum SortType {
     		return " order by is_first_day "+ sortOrder;
     	}
     	return " order by "+StringUtils.toUnderScoreCase(sortName)+" "+ sortOrder;
+    }
+
+    /**
+     * 仅允许 asc/desc，防止 ORDER BY 注入。
+     */
+    private static String normalizeSortOrder(String sortOrder) {
+    	if (sortOrder != null && "asc".equalsIgnoreCase(sortOrder.trim())) {
+    		return "asc";
+    	}
+    	return "desc";
     }
     
     

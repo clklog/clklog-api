@@ -15,18 +15,18 @@ spring:
   application.name: clklog-api
   datasource:
     clickhouse:
-      jdbc-url: jdbc:clickhouse://localhost:8123/default
-      username: default
-      password: 123456
+      jdbc-url: ${CLICKHOUSE_JDBC_URL:jdbc:clickhouse://localhost:8123/default}
+      username: ${CLICKHOUSE_USERNAME:default}
+      password: ${CLICKHOUSE_PASSWORD:123456}
       driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
       connection-timeout: 20000
       socket-timeout: 60000
       maximum-pool-size: 5
   redis:
-    host: 10.10.220.37
-    port: 6379
-    database: 0
-    password:
+    host: ${REDIS_HOST:10.10.220.37}
+    port: ${REDIS_PORT:6379}
+    database: ${REDIS_DATABASE:0}
+    password: ${REDIS_PASSWORD:}
     lettuce:
       pool:
         min-idle: 4
@@ -34,13 +34,25 @@ spring:
         max-active: 4
 token:
   header: Authorization
-  secret: c609737e578978eccc64cef4be680
+  # api 与 manage 必须使用同一密钥（前端登录在 manage 签发，业务接口在 api 校验）
+  # 生产务必通过环境变量 TOKEN_SECRET 覆盖为足够长的随机串
+  secret: ${TOKEN_SECRET:clklog-shared-change-me-use-env-token-secret-at-least-32chars}
   expireTime: 300
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 logging:
   file:
     path: log
 clklog-common:
-  access-control-allow-origin-patterns: "*"
+  # 默认 * 兼容现有部署；代码在 origin=* 时会关闭 allowCredentials，避免 P0 组合风险
+  # 生产建议设为具体前端域名，例如 CORS_ORIGIN_PATTERNS=https://demo.example.com
+  access-control-allow-origin-patterns: ${CORS_ORIGIN_PATTERNS:*}
 clklog-api:
   project-name: clklogapp
   lib-type-map:

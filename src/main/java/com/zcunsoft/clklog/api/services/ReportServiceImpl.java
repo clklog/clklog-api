@@ -28,6 +28,7 @@ import com.zcunsoft.clklog.api.models.uservisit.*;
 import com.zcunsoft.clklog.api.models.visitor.*;
 import com.zcunsoft.clklog.api.models.visituri.*;
 import com.zcunsoft.clklog.api.services.utils.FilterBuildUtils;
+import com.zcunsoft.clklog.api.utils.PageLimitUtil;
 import com.zcunsoft.clklog.api.utils.TimeUtils;
 import com.zcunsoft.clklog.api.utils.TreeUtils;
 import com.zcunsoft.clklog.common.utils.ObjectMapperUtil;
@@ -119,6 +120,16 @@ public class ReportServiceImpl implements IReportService {
                     return new DecimalFormat("0.####");
                 }
             };
+
+    /**
+     * 请求结束后清理 ThreadLocal，避免线程池复用导致泄漏。
+     */
+    public void clearThreadLocals() {
+        yMdFORMAT.remove();
+        hFORMAT.remove();
+        yMdHmsFORMAT.remove();
+        decimalFormat.remove();
+    }
 
     @Override
     public GetFlowResponse getFlow(GetFlowRequest getFlowRequest) {
@@ -348,7 +359,7 @@ public class ReportServiceImpl implements IReportService {
         getListSql += " group by t.uri,t.title,t.uri_path";
         String sortSql = SortType.getSortSql(SortType.VisitUriDetail, getVisitUriDetailPageRequest.getSortName(), getVisitUriDetailPageRequest.getSortOrder());
         getListSql += sortSql;
-        getListSql += " limit " + (getVisitUriDetailPageRequest.getPageNum() - 1) * getVisitUriDetailPageRequest.getPageSize() + "," + getVisitUriDetailPageRequest.getPageSize();
+        getListSql += PageLimitUtil.limitClause(getVisitUriDetailPageRequest.getPageNum(), getVisitUriDetailPageRequest.getPageSize());
 
         List<VisituriDetailbydate> visitUriDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<VisituriDetailbydate>(VisituriDetailbydate.class));
 
@@ -510,7 +521,7 @@ public class ReportServiceImpl implements IReportService {
         getListSql += " group by t.province ";
         String sortSql = SortType.getSortSql(SortType.AreaDetail, getAreaDetailPageRequest.getSortName(), getAreaDetailPageRequest.getSortOrder());
         getListSql += sortSql;
-        getListSql += " limit " + (getAreaDetailPageRequest.getPageNum() - 1) * getAreaDetailPageRequest.getPageSize() + "," + getAreaDetailPageRequest.getPageSize();
+        getListSql += PageLimitUtil.limitClause(getAreaDetailPageRequest.getPageNum(), getAreaDetailPageRequest.getPageSize());
 
         List<AreaDetailbydate> areaDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<AreaDetailbydate>(AreaDetailbydate.class));
 
@@ -636,7 +647,7 @@ public class ReportServiceImpl implements IReportService {
         getListSql += " group by t.country ";
         String sortSql = SortType.getSortSql(SortType.AreaDetail, getAreaDetailPageRequest.getSortName(), getAreaDetailPageRequest.getSortOrder());
         getListSql += sortSql;
-        getListSql += " limit " + (getAreaDetailPageRequest.getPageNum() - 1) * getAreaDetailPageRequest.getPageSize() + "," + getAreaDetailPageRequest.getPageSize();
+        getListSql += PageLimitUtil.limitClause(getAreaDetailPageRequest.getPageNum(), getAreaDetailPageRequest.getPageSize());
 
         List<AreaDetailbydate> areaDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<AreaDetailbydate>(AreaDetailbydate.class));
 
@@ -746,7 +757,7 @@ public class ReportServiceImpl implements IReportService {
         getAllSql += "(" + getListSql + ") p1 full outer join (" + getCompareListSql + ") p2 on p1.province=p2.compare_province";
 
         getAllCountSql += "(" +getAllSql+") p3";
-        getAllSql += " limit " + (getAreaDetailComparePageRequest.getPageNum() - 1) * getAreaDetailComparePageRequest.getPageSize() + "," + getAreaDetailComparePageRequest.getPageSize();
+        getAllSql += PageLimitUtil.limitClause(getAreaDetailComparePageRequest.getPageNum(), getAreaDetailComparePageRequest.getPageSize());
         List<AreaDetailbycompare> areaDetailbydateList = clickHouseJdbcTemplate.query(getAllSql, paramMap, new BeanPropertyRowMapper<AreaDetailbycompare>(AreaDetailbycompare.class));
         Integer total = clickHouseJdbcTemplate.queryForObject(getAllCountSql, paramMap, Integer.class);
 
@@ -861,7 +872,7 @@ public class ReportServiceImpl implements IReportService {
         getAllSql += "(" + getListSql + ") p1 full outer join (" + getCompareListSql + ") p2 on p1.country=p2.compare_country";
 
         getAllCountSql += "(" +getAllSql+") p3";
-        getAllSql += " limit " + (getAreaDetailComparePageRequest.getPageNum() - 1) * getAreaDetailComparePageRequest.getPageSize() + "," + getAreaDetailComparePageRequest.getPageSize();
+        getAllSql += PageLimitUtil.limitClause(getAreaDetailComparePageRequest.getPageNum(), getAreaDetailComparePageRequest.getPageSize());
         List<AreaDetailbycompare> areaDetailbydateList = clickHouseJdbcTemplate.query(getAllSql, paramMap, new BeanPropertyRowMapper<AreaDetailbycompare>(AreaDetailbycompare.class));
         Integer total = clickHouseJdbcTemplate.queryForObject(getAllCountSql, paramMap, Integer.class);
 
@@ -1284,7 +1295,7 @@ public class ReportServiceImpl implements IReportService {
         getListSql += " group by t.searchword ";
         String sortSql = SortType.getSortSql(SortType.SearchWordDetail, getSearchWordDetailRequest.getSortName(), getSearchWordDetailRequest.getSortOrder());
         getListSql += sortSql;
-        getListSql += " limit " + (getSearchWordDetailRequest.getPageNum() - 1) * getSearchWordDetailRequest.getPageSize() + "," + getSearchWordDetailRequest.getPageSize();
+        getListSql += PageLimitUtil.limitClause(getSearchWordDetailRequest.getPageNum(), getSearchWordDetailRequest.getPageSize());
 
         List<SearchWordDetail> searchWordDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<SearchWordDetail>(SearchWordDetail.class));
 
@@ -1415,7 +1426,7 @@ public class ReportServiceImpl implements IReportService {
         getListSql += " group by t.device";
         String sortSql = SortType.getSortSql(SortType.DeviceDetail, getDeviceDetailPageRequest.getSortName(), getDeviceDetailPageRequest.getSortOrder());
         getListSql += sortSql;
-        getListSql += " limit " + (getDeviceDetailPageRequest.getPageNum() - 1) * getDeviceDetailPageRequest.getPageSize() + "," + getDeviceDetailPageRequest.getPageSize();
+        getListSql += PageLimitUtil.limitClause(getDeviceDetailPageRequest.getPageNum(), getDeviceDetailPageRequest.getPageSize());
         List<DeviceDetailbydate> deviceDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<DeviceDetailbydate>(DeviceDetailbydate.class));
 
         List<DeviceDetailbydate> summaryDeviceDetailbydateList = clickHouseJdbcTemplate.query(getSummarySql, paramMap, new BeanPropertyRowMapper<DeviceDetailbydate>(DeviceDetailbydate.class));
@@ -1708,7 +1719,7 @@ public class ReportServiceImpl implements IReportService {
         getListSql += " group by t.distinct_id,t.is_first_day";
         String sortSql = SortType.getSortSql(SortType.VisitorList, getVisitorListPageRequest.getSortName(), getVisitorListPageRequest.getSortOrder());
         getListSql += sortSql;
-        getListSql += " limit " + (getVisitorListPageRequest.getPageNum() - 1) * getVisitorListPageRequest.getPageSize() + "," + getVisitorListPageRequest.getPageSize();
+        getListSql += PageLimitUtil.limitClause(getVisitorListPageRequest.getPageNum(), getVisitorListPageRequest.getPageSize());
 
         getCountSql += " group by t.distinct_id,t.is_first_day)";
         List<VisitorDetailbyinfo> visitorDetailbyinfoList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<VisitorDetailbyinfo>(VisitorDetailbyinfo.class));
@@ -1766,10 +1777,7 @@ public class ReportServiceImpl implements IReportService {
 			getListSql += " group by t.event_session_id,t.distinct_id,t.sourcesite,t.searchword having pv > 0 ";
 			getCountSql += whereClause;
 			getCountSql += " group by t.event_session_id,t.distinct_id,t.sourcesite,t.searchword having pv > 0) ";
-			getListSql += " order by first_time desc limit "
-					+ (getVisitorSessionListPageRequest.getPageNum() - 1)
-							* getVisitorSessionListPageRequest.getPageSize()
-					+ "," + getVisitorSessionListPageRequest.getPageSize();
+			getListSql += " order by first_time desc" + PageLimitUtil.limitClause(getVisitorSessionListPageRequest.getPageNum(), getVisitorSessionListPageRequest.getPageSize());
 			visitorDetailbysessionList = clickHouseJdbcTemplate.query(getListSql, paramMap,
 					new BeanPropertyRowMapper<VisitorDetailbysession>(VisitorDetailbysession.class));
 			total = clickHouseJdbcTemplate.queryForObject(getCountSql, paramMap, Integer.class);
@@ -1857,10 +1865,7 @@ public class ReportServiceImpl implements IReportService {
 				getListSql += " and t.stat_date>=:statDate";
 				paramMap.addValue("statDate", this.yMdFORMAT.get().format(visitorDetailbysession.getStatDate()));
 			}
-			getListSql += " order by t.log_time asc limit "
-					+ (getVisitorSessionUriListPageRequest.getPageNum() - 1)
-							* getVisitorSessionUriListPageRequest.getPageSize()
-					+ "," + getVisitorSessionUriListPageRequest.getPageSize();
+			getListSql += " order by t.log_time asc" + PageLimitUtil.limitClause(getVisitorSessionUriListPageRequest.getPageNum(), getVisitorSessionUriListPageRequest.getPageSize());
 			logAnalysisbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap,
 					new BeanPropertyRowMapper<LogAnalysisbydate>(LogAnalysisbydate.class));
 		}
@@ -1900,7 +1905,7 @@ public class ReportServiceImpl implements IReportService {
 	         String formattedDate = dateFormat.format(date);
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("unexpected error", e);
 		}
 		**/;
          where = buildChannelByAllFilter(getLogAnalysisListPageRequest.getChannel(), paramMap, where);
@@ -1915,7 +1920,7 @@ public class ReportServiceImpl implements IReportService {
              getListSql += " where t.event in('$pageview','$AppViewScreen','$MPViewScreen') " + where;
              getCountSql += " where t.event in('$pageview','$AppViewScreen','$MPViewScreen') " + where;
          }
-         getListSql += " order by t.log_time asc limit " + (getLogAnalysisListPageRequest.getPageNum() - 1) * getLogAnalysisListPageRequest.getPageSize() + "," + getLogAnalysisListPageRequest.getPageSize();
+         getListSql += " order by t.log_time asc" + PageLimitUtil.limitClause(getLogAnalysisListPageRequest.getPageNum(), getLogAnalysisListPageRequest.getPageSize());
 
 
          List<LogAnalysisbydate>  logAnalysisbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<LogAnalysisbydate>(LogAnalysisbydate.class));
@@ -2436,7 +2441,7 @@ public class ReportServiceImpl implements IReportService {
         getListSql += " group by t.sourcesite";
         String sortSql = SortType.getSortSql(SortType.SourceWebSiteDetail, getSourceWebsiteDetailPageRequest.getSortName(), getSourceWebsiteDetailPageRequest.getSortOrder());
         getListSql += sortSql;
-        getListSql += " limit " + (getSourceWebsiteDetailPageRequest.getPageNum() - 1) * getSourceWebsiteDetailPageRequest.getPageSize() + "," + getSourceWebsiteDetailPageRequest.getPageSize();
+        getListSql += PageLimitUtil.limitClause(getSourceWebsiteDetailPageRequest.getPageNum(), getSourceWebsiteDetailPageRequest.getPageSize());
 
         List<SourcesiteDetailbydate> sourcesiteDetailbydateList = clickHouseJdbcTemplate.query(getListSql, paramMap, new BeanPropertyRowMapper<SourcesiteDetailbydate>(SourcesiteDetailbydate.class));
 
@@ -2745,7 +2750,7 @@ public class ReportServiceImpl implements IReportService {
     }
 
     private PredictionAvg getPredictionAvg(GetFlowRequest getFlowRequest, List<String> statDateList) throws IOException {
-        String getListSql = FileUtils.readFileToString(new File(System.getProperty("user.dir") + File.separator + "sql" + File.separator + "trend_prediction_for_in_dates.sql"), Charset.forName("GB2312"));
+        String getListSql = FileUtils.readFileToString(new File(System.getProperty("user.dir") + File.separator + "sql" + File.separator + "trend_prediction_for_in_dates.sql"), Charset.forName("UTF-8"));
 
         MapSqlParameterSource paramMap = new MapSqlParameterSource();
         paramMap.addValue("country", "all");

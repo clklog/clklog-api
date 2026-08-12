@@ -635,7 +635,7 @@ public class ExcelExportUtils  {
                 return Long.parseLong("" + (long) cell.getNumericCellValue());
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("unexpected error", e);
         }
         return 0L;
     }
@@ -646,7 +646,7 @@ public class ExcelExportUtils  {
                 return Integer.parseInt("" + (int) cell.getNumericCellValue());
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("unexpected error", e);
         }
         return 0;
     }
@@ -682,11 +682,11 @@ public class ExcelExportUtils  {
   			    try {
   					name = new String(name.getBytes("utf-8"), "iso-8859-1");
   				} catch (UnsupportedEncodingException e) {
-  					e.printStackTrace();
+  					log.error("unexpected error", e);
   				}  
   			}  
   		} catch (UnsupportedEncodingException e) {
-  			e.printStackTrace();
+  			log.error("unexpected error", e);
   		}  
   	    	return name;
   	}

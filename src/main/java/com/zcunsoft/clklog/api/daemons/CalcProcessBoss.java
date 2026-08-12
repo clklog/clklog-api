@@ -88,7 +88,7 @@ public class CalcProcessBoss {
         try {
             thread.join();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.error("unexpected error", e);
         }
 
         if (logger.isInfoEnabled()) {
